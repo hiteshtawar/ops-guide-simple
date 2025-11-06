@@ -1,4 +1,4 @@
-package com.opsguide.config;
+package com.productionsupport.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

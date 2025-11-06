@@ -1,4 +1,4 @@
-package com.opsguide.model;
+package com.productionsupport.model;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

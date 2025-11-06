@@ -1,13 +1,14 @@
-package com.opsguide;
+package com.productionsupport;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class OpsGuideSimpleApplication {
+public class ProductionSupportApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(OpsGuideSimpleApplication.class, args);
+        SpringApplication.run(ProductionSupportApplication.class, args);
     }
+
 }
 

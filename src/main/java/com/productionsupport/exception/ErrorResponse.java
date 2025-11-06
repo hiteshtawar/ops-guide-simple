@@ -1,4 +1,4 @@
-package com.opsguide.exception;
+package com.productionsupport.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,20 +6,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 /**
- * Response structure for validation errors
+ * Response structure for generic errors
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ValidationErrorResponse {
+public class ErrorResponse {
     private LocalDateTime timestamp;
     private int status;
     private String error;
     private String message;
-    private Map<String, String> errors;
 }
 

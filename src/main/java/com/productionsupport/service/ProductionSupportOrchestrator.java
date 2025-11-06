@@ -1,9 +1,9 @@
-package com.opsguide.service;
+package com.productionsupport.service;
 
-import com.opsguide.model.OperationalRequest;
-import com.opsguide.model.OperationalResponse;
-import com.opsguide.model.OperationalResponse.RunbookStep;
-import com.opsguide.service.PatternClassifier.ClassificationResult;
+import com.productionsupport.model.OperationalRequest;
+import com.productionsupport.model.OperationalResponse;
+import com.productionsupport.model.OperationalResponse.RunbookStep;
+import com.productionsupport.service.PatternClassifier.ClassificationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

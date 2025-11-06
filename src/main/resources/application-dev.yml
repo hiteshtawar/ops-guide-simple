@@ -12,6 +12,6 @@ case-management:
 
 logging:
   level:
-    com.opsguide: DEBUG
+    com.productionsupport: DEBUG
     org.springframework.web: DEBUG
 

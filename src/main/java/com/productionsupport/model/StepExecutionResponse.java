@@ -1,4 +1,4 @@
-package com.opsguide.model;
+package com.productionsupport.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
