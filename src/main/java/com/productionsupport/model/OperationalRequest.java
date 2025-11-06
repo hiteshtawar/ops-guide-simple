@@ -32,7 +32,10 @@ public class OperationalRequest {
     
     /**
      * Optional: Override automatic pattern detection
+     * If provided, classification is skipped and entity extraction still occurs
      * Allowed values: CANCEL_CASE, UPDATE_CASE_STATUS
+     * 
+     * Use GET /api/v1/tasks to fetch available task IDs
      */
     private String taskId;
 }

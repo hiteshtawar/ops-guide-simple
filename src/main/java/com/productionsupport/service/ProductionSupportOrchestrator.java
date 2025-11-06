@@ -3,6 +3,7 @@ package com.productionsupport.service;
 import com.productionsupport.model.OperationalRequest;
 import com.productionsupport.model.OperationalResponse;
 import com.productionsupport.model.OperationalResponse.RunbookStep;
+import com.productionsupport.model.TaskType;
 import com.productionsupport.service.PatternClassifier.ClassificationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,12 +24,6 @@ public class ProductionSupportOrchestrator {
     private final PatternClassifier patternClassifier;
     private final RunbookParser runbookParser;
     
-    // Task names for display
-    private static final Map<String, String> TASK_NAMES = Map.of(
-        "CANCEL_CASE", "Cancel Case",
-        "UPDATE_CASE_STATUS", "Update Case Status"
-    );
-    
     /**
      * Process an operational request and return next steps
      */
@@ -36,32 +31,32 @@ public class ProductionSupportOrchestrator {
         log.info("Processing request: {}", request.getQuery());
         
         // Step 1: Classify the request (or use explicit taskId if provided)
-        String taskId;
+        TaskType taskType;
         Map<String, String> entities;
         
         if (request.getTaskId() != null && !request.getTaskId().isEmpty()) {
             // Explicit task ID provided
-            taskId = request.getTaskId();
+            taskType = TaskType.fromString(request.getTaskId());
             // Still need to extract entities
             ClassificationResult classification = patternClassifier.classify(request.getQuery());
             entities = classification.getEntities();
         } else {
             // Classify using pattern matching
             ClassificationResult classification = patternClassifier.classify(request.getQuery());
-            taskId = classification.getTaskId();
+            taskType = classification.getTaskType();
             entities = classification.getEntities();
         }
         
         // Step 2: Get runbook steps for the classified task
-        List<RunbookStep> steps = runbookParser.getSteps(taskId, null);
+        List<RunbookStep> steps = runbookParser.getSteps(taskType.name(), null);
         
         // Step 3: Build warnings
-        List<String> warnings = buildWarnings(taskId, entities);
+        List<String> warnings = buildWarnings(taskType, entities);
         
         // Step 4: Build response
         return OperationalResponse.builder()
-            .taskId(taskId)
-            .taskName(TASK_NAMES.getOrDefault(taskId, taskId))
+            .taskId(taskType.name())
+            .taskName(taskType.getDisplayName())
             .extractedEntities(entities)
             .steps(steps)
             .warnings(warnings)
@@ -76,20 +71,52 @@ public class ProductionSupportOrchestrator {
     }
     
     /**
+     * Get all available task types
+     * Useful for UI to display options when pattern detection fails
+     */
+    public List<Map<String, String>> getAvailableTasks() {
+        List<Map<String, String>> tasks = new ArrayList<>();
+        
+        for (TaskType taskType : TaskType.values()) {
+            if (taskType != TaskType.UNKNOWN) {
+                Map<String, String> task = Map.of(
+                    "taskId", taskType.name(),
+                    "taskName", taskType.getDisplayName(),
+                    "description", getTaskDescription(taskType)
+                );
+                tasks.add(task);
+            }
+        }
+        
+        return tasks;
+    }
+    
+    /**
+     * Get description for each task type
+     */
+    private String getTaskDescription(TaskType taskType) {
+        return switch (taskType) {
+            case CANCEL_CASE -> "Cancel a pathology case - requires case ID";
+            case UPDATE_CASE_STATUS -> "Update case workflow status - requires case ID and target status";
+            default -> "Unknown task type";
+        };
+    }
+    
+    /**
      * Build warnings based on extracted entities and task
      */
-    private List<String> buildWarnings(String taskId, Map<String, String> entities) {
+    private List<String> buildWarnings(TaskType taskType, Map<String, String> entities) {
         List<String> warnings = new ArrayList<>();
         
         if (!entities.containsKey("case_id")) {
             warnings.add("No case ID found in query. You'll need to provide it manually.");
         }
         
-        if ("UPDATE_CASE_STATUS".equals(taskId) && !entities.containsKey("status")) {
+        if (taskType == TaskType.UPDATE_CASE_STATUS && !entities.containsKey("status")) {
             warnings.add("No target status found in query. You'll need to provide it manually.");
         }
         
-        if ("CANCEL_CASE".equals(taskId)) {
+        if (taskType == TaskType.CANCEL_CASE) {
             warnings.add("Case cancellation is a critical operation. Please review pre-checks carefully.");
         }
         

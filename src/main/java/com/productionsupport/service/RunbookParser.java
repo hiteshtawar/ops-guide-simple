@@ -1,6 +1,7 @@
 package com.productionsupport.service;
 
 import com.productionsupport.model.OperationalResponse.RunbookStep;
+import com.productionsupport.model.TaskType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -30,8 +31,8 @@ public class RunbookParser {
     
     public RunbookParser() {
         // Pre-load runbooks on startup
-        loadRunbook("CANCEL_CASE", "runbooks/cancel-case-runbook.md");
-        loadRunbook("UPDATE_CASE_STATUS", "runbooks/update-case-status-runbook.md");
+        loadRunbook(TaskType.CANCEL_CASE.name(), "runbooks/cancel-case-runbook.md");
+        loadRunbook(TaskType.UPDATE_CASE_STATUS.name(), "runbooks/update-case-status-runbook.md");
     }
     
     /**

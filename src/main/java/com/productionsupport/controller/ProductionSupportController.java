@@ -23,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Main REST API controller for Production Support
@@ -51,6 +52,23 @@ public class ProductionSupportController {
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("OK");
+    }
+    
+    @Operation(
+        summary = "Get Available Tasks",
+        description = "Returns list of all supported task types. Useful for UI to display options when automatic pattern detection fails or for manual task selection."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully retrieved available tasks",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
+        )
+    })
+    @GetMapping("/tasks")
+    public ResponseEntity<List<Map<String, String>>> getAvailableTasks() {
+        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+        return ResponseEntity.ok(tasks);
     }
     
     @Operation(

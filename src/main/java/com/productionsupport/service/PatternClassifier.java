@@ -1,5 +1,6 @@
 package com.productionsupport.service;
 
+import com.productionsupport.model.TaskType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -54,20 +55,12 @@ public class PatternClassifier {
         }
         
         // Pattern matching for task classification
-        String taskId = classifyTask(normalizedQuery, entities);
+        TaskType taskType = classifyTask(normalizedQuery, entities);
         
-        if (taskId == null) {
-            log.warn("Could not classify query: {}", query);
-            return ClassificationResult.builder()
-                .taskId("UNKNOWN")
-                .entities(entities)
-                .build();
-        }
-        
-        log.info("Classified as {} with entities: {}", taskId, entities);
+        log.info("Classified as {} with entities: {}", taskType, entities);
         
         return ClassificationResult.builder()
-            .taskId(taskId)
+            .taskType(taskType)
             .entities(entities)
             .build();
     }
@@ -118,13 +111,13 @@ public class PatternClassifier {
     /**
      * Classify the task based on normalized query and entities
      */
-    private String classifyTask(String normalizedQuery, Map<String, String> entities) {
+    private TaskType classifyTask(String normalizedQuery, Map<String, String> entities) {
         // CANCEL_CASE patterns - check for cancel/delete/remove keywords
         if (containsAny(normalizedQuery, "cancel", "cancellation", "abort", "delete", "remove", 
                        "stop case", "terminate", "drop")) {
             // Make sure it's not about cancelling a status update
             if (!containsAny(normalizedQuery, "update", "change status", "set status")) {
-                return "CANCEL_CASE";
+                return TaskType.CANCEL_CASE;
             }
         }
         
@@ -132,21 +125,21 @@ public class PatternClassifier {
         if (containsAny(normalizedQuery, "update status", "change status", "set status", 
                        "mark status", "status to", "mark as", "move to", "transition to",
                        "mark to")) {
-            return "UPDATE_CASE_STATUS";
+            return TaskType.UPDATE_CASE_STATUS;
         }
         
         // If query has a status keyword and action verbs, it's likely a status update
         if (containsStatus(normalizedQuery) && 
             containsAny(normalizedQuery, "set", "mark", "change", "move", "transition", "update", "to")) {
-            return "UPDATE_CASE_STATUS";
+            return TaskType.UPDATE_CASE_STATUS;
         }
         
         // Fallback: if we have both case_id and status, assume UPDATE_CASE_STATUS
         if (entities.containsKey("case_id") && entities.containsKey("status")) {
-            return "UPDATE_CASE_STATUS";
+            return TaskType.UPDATE_CASE_STATUS;
         }
         
-        return null;
+        return TaskType.UNKNOWN;
     }
     
     /**
@@ -175,11 +168,11 @@ public class PatternClassifier {
      * Classification result
      */
     public static class ClassificationResult {
-        private final String taskId;
+        private final TaskType taskType;
         private final Map<String, String> entities;
         
-        private ClassificationResult(String taskId, Map<String, String> entities) {
-            this.taskId = taskId;
+        private ClassificationResult(TaskType taskType, Map<String, String> entities) {
+            this.taskType = taskType;
             this.entities = entities;
         }
         
@@ -187,15 +180,15 @@ public class PatternClassifier {
             return new ClassificationResultBuilder();
         }
         
-        public String getTaskId() { return taskId; }
+        public TaskType getTaskType() { return taskType; }
         public Map<String, String> getEntities() { return entities; }
         
         public static class ClassificationResultBuilder {
-            private String taskId;
+            private TaskType taskType;
             private Map<String, String> entities;
             
-            public ClassificationResultBuilder taskId(String taskId) {
-                this.taskId = taskId;
+            public ClassificationResultBuilder taskType(TaskType taskType) {
+                this.taskType = taskType;
                 return this;
             }
             
@@ -205,7 +198,7 @@ public class PatternClassifier {
             }
             
             public ClassificationResult build() {
-                return new ClassificationResult(taskId, entities);
+                return new ClassificationResult(taskType, entities);
             }
         }
     }
