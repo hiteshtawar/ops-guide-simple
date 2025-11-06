@@ -1,10 +1,15 @@
 # Production profile
-spring:
-  application:
-    name: ops-guide-simple-prod
-
 server:
   port: 8093
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # jwk-set-uri: https://your-auth-server.com/.well-known/jwks.json
+          # issuer-uri: https://your-auth-server.com
+          # For API Gateway forwarded JWT, configure accordingly
 
 case-management:
   api:
@@ -14,14 +19,4 @@ logging:
   level:
     com.productionsupport: INFO
     org.springframework.web: WARN
-
-# JWT Security Configuration
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          # jwk-set-uri: https://your-auth-server.com/.well-known/jwks.json
-          # issuer-uri: https://your-auth-server.com
-          # For API Gateway forwarded JWT, configure accordingly
 

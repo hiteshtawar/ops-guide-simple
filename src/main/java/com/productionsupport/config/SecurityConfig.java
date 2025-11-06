@@ -12,6 +12,11 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * Security configuration for JWT-based authentication
  * Roles/permissions are extracted from JWT token (no database needed)
+ * 
+ * Profiles:
+ * - local/default: Security completely disabled (no JWT, @PreAuthorize bypassed)
+ * - dev: JWT required, @PreAuthorize enabled
+ * - prod: JWT required, @PreAuthorize enabled
  */
 @Configuration
 @EnableWebSecurity
@@ -45,16 +50,40 @@ public class SecurityConfig {
     }
 
     /**
-     * Development security configuration (disabled for easier testing)
+     * Development security configuration (same as prod, but with relaxed JWT validation)
      */
     @Bean
-    @Profile({"dev", "default"})
+    @Profile("dev")
     public SecurityFilterChain devSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll() // Allow all requests in dev mode
+                // Public endpoints
+                .requestMatchers("/api/v1/health", "/actuator/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
+                // All other endpoints require authentication
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> {
+                    // JWT validation - accepts test tokens with HS256
+                })
+            );
+
+        return http.build();
+    }
+
+    /**
+     * Local security configuration (completely disabled for easier local development)
+     */
+    @Bean
+    @Profile({"local", "default"})
+    public SecurityFilterChain localSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .anyRequest().permitAll() // Allow all requests - no JWT needed
             );
 
         return http.build();

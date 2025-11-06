@@ -1,8 +1,13 @@
 #!/bin/bash
 
 echo "=========================================="
-echo "  OpsGuide Simple - Starting Server"
+echo "  Production Support - Starting Server"
 echo "=========================================="
+echo ""
+echo "Profiles:"
+echo "  local - No security (default)"
+echo "  dev   - JWT security enabled"
+echo "  prod  - Production security"
 echo ""
 
 # Check if Java is installed
@@ -34,7 +39,7 @@ echo "✅ Maven version: $(mvn -version | head -n 1)"
 echo ""
 
 # Determine profile
-PROFILE=${1:-default}
+PROFILE=${1:-local}
 echo "🚀 Starting with profile: $PROFILE"
 echo ""
 
@@ -48,16 +53,14 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "🎯 Starting OpsGuide Simple..."
-echo "   Server: http://localhost:8080"
-echo "   Health: http://localhost:8080/api/v1/health"
+echo "🎯 Starting Production Support..."
+echo "   Server: http://localhost:8093"
+echo "   Health: http://localhost:8093/api/v1/health"
+echo "   Swagger: http://localhost:8093/swagger-ui.html"
+echo "   Profile: $PROFILE"
 echo ""
 echo "Press Ctrl+C to stop"
 echo ""
 
-if [ "$PROFILE" == "default" ]; then
-    mvn spring-boot:run
-else
-    mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
-fi
+mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
 
