@@ -96,8 +96,8 @@ public class ProductionSupportOrchestrator {
      */
     private String getTaskDescription(TaskType taskType) {
         return switch (taskType) {
-            case CANCEL_CASE -> "Cancel a pathology case - requires case ID";
-            case UPDATE_CASE_STATUS -> "Update case workflow status - requires case ID and target status";
+            case CANCEL_CASE -> "Cancel a pathology case. Type: cancel case 2025P1234 and hit Send";
+            case UPDATE_CASE_STATUS -> "Update case workflow status. Type: update case status to pending 2025P1234 and hit Send";
             default -> "Unknown task type";
         };
     }

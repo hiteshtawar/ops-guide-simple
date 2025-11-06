@@ -52,12 +52,12 @@ Show runbook steps
   {
     "taskId": "CANCEL_CASE",
     "taskName": "Cancel Case",
-    "description": "Cancel a pathology case - requires case ID"
+    "description": "Cancel a pathology case. Type: cancel case 2025P1234 and hit Send"
   },
   {
     "taskId": "UPDATE_CASE_STATUS",
     "taskName": "Update Case Status",
-    "description": "Update case workflow status - requires case ID and target status"
+    "description": "Update case workflow status. Type: update case status to pending 2025P1234 and hit Send"
   }
 ]
 ```
@@ -173,12 +173,13 @@ const processQuery = async (query, taskId = null) => {
 │  What would you like to do?            │
 │                                        │
 │  ○ Cancel Case                         │
-│    Cancel a pathology case             │
+│    Type: cancel case 2025P1234         │
 │                                        │
 │  ○ Update Case Status                  │
-│    Update case workflow status         │
+│    Type: update status to pending      │
+│           2025P1234                    │
 │                                        │
-│  [Continue]                            │
+│  [Show Example] [Dismiss]              │
 └────────────────────────────────────────┘
 
 ↓ (User selects "Cancel Case")
