@@ -1,0 +1,17 @@
+# Development profile
+spring:
+  application:
+    name: ops-guide-simple-dev
+
+server:
+  port: 8093
+
+case-management:
+  api:
+    base-url: https://dev-api.example.com/v2
+
+logging:
+  level:
+    com.opsguide: DEBUG
+    org.springframework.web: DEBUG
+

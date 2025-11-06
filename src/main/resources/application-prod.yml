@@ -1,0 +1,17 @@
+# Production profile
+spring:
+  application:
+    name: ops-guide-simple-prod
+
+server:
+  port: 8080
+
+case-management:
+  api:
+    base-url: https://api.example.com/v2
+
+logging:
+  level:
+    com.opsguide: INFO
+    org.springframework.web: WARN
+
