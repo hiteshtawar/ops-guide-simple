@@ -11,44 +11,24 @@ Complete cancellation of a case including cleanup of associated workflows, notif
 
 ## Pre-checks
 
-1. **Authorization Check**
+1. **Verify User Has Cancel Permission**
    ```bash
-   # Verify user has case_admin or ops_engineer role
-   GET /api/v2/users/{user_id}/roles
+   GET /api/v1/users/{user_id}/permissions/cancel_case
    ```
 
-2. **Case Status Validation**
+2. **Verify Case Exists**
    ```bash
-   # Case must be in cancellable state
+   GET /api/v2/cases/{case_id}
+   ```
+
+3. **Check Case Not Already Cancelled**
+   ```bash
    GET /api/v2/cases/{case_id}/status
-   # Valid states: pending, accessioning, grossing, embedding, cutting, staining, microscopy, under_review, on_hold
-   # Invalid states: completed, cancelled, archived, closed
-   ```
-
-3. **Business Rule Checks**
-   ```bash
-   # Check for active dependencies or blocking issues
-   GET /api/v2/cases/{case_id}/dependencies
-   # Ensure no active_hold: true
-   # Ensure related_orders_status != "in_progress"
-   # Verify no critical alerts attached
-   ```
-
-4. **Cancellation Window**
-   ```bash
-   # Verify within business hours (if required)
-   # Check case age < 30 days for automatic approval
-   GET /api/v2/cases/{case_id}/metadata
    ```
 
 ## Procedure
 
-1. **Generate Idempotency Key**
-   ```bash
-   IDEMPOTENCY_KEY=$(uuidgen)
-   ```
-
-2. **Preview Cancellation Impact**
+1. **Preview Cancellation Impact**
    ```bash
    GET /api/v2/cases/{case_id}/cancel/preview
    Headers:
@@ -56,7 +36,7 @@ Complete cancellation of a case including cleanup of associated workflows, notif
      X-User-ID: {user_id}
    ```
 
-3. **Execute Cancellation**
+2. **Execute Case Cancellation**
    ```bash
    POST /api/v2/cases/{case_id}/cancel
    Headers:
@@ -73,66 +53,17 @@ Complete cancellation of a case including cleanup of associated workflows, notif
    }
    ```
 
-4. **Wait for Async Processing**
-   ```bash
-   # Poll status every 30 seconds, max 5 minutes
-   GET /api/v2/cases/{case_id}/cancel/status
-   # Expected: status="processing" -> status="completed"
-   ```
-
-## Rollback Procedure
-
-**Within 2 hours of cancellation:**
-
-1. **Check Reinstatement Eligibility**
-   ```bash
-   GET /api/v2/cases/{case_id}/reinstate/eligibility
-   ```
-
-2. **Reinstate Case** (if eligible)
-   ```bash
-   POST /api/v2/cases/{case_id}/reinstate
-   Headers:
-     Authorization: Bearer {token}
-     X-User-ID: {user_id}
-     X-Idempotency-Key: {new_uuid}
-   
-   Body:
-   {
-     "reason": "rollback_cancellation",
-     "restore_previous_state": true
-   }
-   ```
-
-**After 2 hours:**
-- Reinstatement requires manual intervention
-- Create remediation ticket with template: CASE-REINSTATE
-- Include original case data from audit log
 
 ## Post-checks
 
-1. **Verify Case Status**
+1. **Verify Case Status Updated to Cancelled**
    ```bash
    GET /api/v2/cases/{case_id}/status
-   # Expected: status="cancelled"
    ```
 
-2. **Check Downstream Systems**
-   ```bash
-   # Verify related orders updated (if applicable)
-   GET /api/v2/cases/{case_id}/related-orders/status
-   
-   # Verify notification sent
-   GET /api/v2/notifications/cases/{case_id}/history
-   
-   # Verify case notes updated
-   GET /api/v2/cases/{case_id}/notes
-   ```
-
-3. **Audit Log Entry**
+2. **Verify Audit Log Entry Created**
    ```bash
    GET /api/v2/cases/{case_id}/audit-log
-   # Verify cancellation event recorded with user_id and timestamp
    ```
 
 ## Error Handling
@@ -147,14 +78,14 @@ Complete cancellation of a case including cleanup of associated workflows, notif
 **Escalation Path:**
 - Level 1: Retry with exponential backoff
 - Level 2: Check case dependencies and resolve blocks
-- Level 3: Contact case management team via #case-ops channel
+- Level 3: Contact connect team via #case-ops channel
 
 ## Risk Assessment
 
 **Risk Level**: Medium
 
 **Potential Impact**:
-- Related orders may be affected if case cancellation propagates
+- Related material may be affected if case cancellation propagates
 - Customer notifications triggered
 - Downstream system cleanup needed
 - Historical case data preserved for audit

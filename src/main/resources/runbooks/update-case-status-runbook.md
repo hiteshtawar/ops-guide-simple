@@ -14,31 +14,18 @@ Update case status following business rules and workflow transitions. Ensures pr
 1. **Authorization Check**
    ```bash
    # Verify user has appropriate role for status transition
-   GET /api/v2/users/{user_id}/roles
-   # Required roles: lab_tech, pathologist, case_admin
+   GET /api/v1/users/{user_id}/roles/case_status_edit
+   # Required roles: production_support
    ```
 
-2. **Case Status Validation**
-   ```bash
-   # Verify case exists and get current status
-   GET /api/v2/cases/{case_id}/status
-   # Ensure case is not in terminal state (completed, cancelled, archived, closed)
-   ```
 
-3. **Status Transition Validation**
+2. **Status Transition Validation**
    ```bash
    # Check if transition is valid based on current status
    # NOTE: This validation is handled by the Case Management Service
-   GET /api/v2/cases/{case_id}/valid-transitions
+   GET /api/v1/cases/{case_id}/valid-transitions
    # Valid transitions follow workflow: pending → accessioning → grossing → embedding → cutting → staining → microscopy → under_review → completed
-   ```
-
-4. **Business Rule Checks**
-   ```bash
-   # Verify no active holds or blocks
-   GET /api/v2/cases/{case_id}/dependencies
-   # Check for required artifacts (signatures, reports, etc.)
-   GET /api/v2/cases/{case_id}/artifacts
+   # Ensure case is not in terminal state (completed, canceled, archived, closed)
    ```
 
 ## Valid Status Transitions
@@ -62,22 +49,7 @@ pending → accessioning → grossing → embedding → cutting → staining →
 
 ## Procedure
 
-1. **Validate Transition**
-   ```bash
-   # Check if requested status transition is valid
-   GET /api/v2/cases/{case_id}/status
-   # Current status must allow transition to target status
-   ```
-
-2. **Prepare Update Request**
-   ```bash
-   # Gather required information
-   REASON="pathologist_signoff"  # or appropriate reason
-   NOTES="Status updated via OpsGuide"
-   ARTIFACTS='{"signature": "digital_signature_data", "report_id": "report_456"}'
-   ```
-
-3. **Execute Status Update**
+1. **Execute Status Update**
    ```bash
    PATCH /api/v2/cases/{case_id}/status
    Headers:
@@ -98,7 +70,7 @@ pending → accessioning → grossing → embedding → cutting → staining →
    }
    ```
 
-4. **Verify Update**
+2. **Verify Update**
    ```bash
    # Confirm status change was applied
    GET /api/v2/cases/{case_id}/status
