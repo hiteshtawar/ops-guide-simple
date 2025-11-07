@@ -62,8 +62,8 @@ aws secretsmanager create-secret \
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/production-support.git
-cd ops-guide-simple
+git clone https://github.com/your-org/production-support-admin.git
+cd production-support-admin
 
 # Build with Maven
 mvn clean package -DskipTests

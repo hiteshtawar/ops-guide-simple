@@ -11,7 +11,7 @@
 
 ## 🎯 What is Production Support?
 
-Production Support helps support engineers execute operational tasks faster and safer by:
+Production Support helps support team execute operational tasks faster and safer by:
 
 - **Natural Language Interface**: Just describe what you want to do
 - **Pattern-Based Classification**: Fast, explainable keyword matching (no AI/ML)

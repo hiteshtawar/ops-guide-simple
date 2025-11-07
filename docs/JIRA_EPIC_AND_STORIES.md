@@ -9,20 +9,20 @@
 
 ## Epic
 
-### Epic ID: PROD-100
+### Epic ID: LIMS2-100
 ### Epic Name: Production Support Functionality for Users
 
 **Epic Description:**
 
-Build an operational automation assistant that helps support engineers execute production tasks faster and safer. The system should accept natural language queries, classify intents, extract entities, and guide engineers through validated runbooks with step-by-step execution.
+Build an operational automation assistant that helps support team execute production tasks faster and safer. The system should accept natural language queries, classify intents, extract entities, and guide the team through validated runbooks with step-by-step execution.
 
 **Business Value:**
-- Reduce operational task time by 70% (from 10 min to 3 min)
-- Decrease operational errors by 90% through standardized runbooks
-- Enable 80% of support engineers to execute complex operations independently
-- Improve onboarding time for new engineers by 50%
+- **Time Savings:** Reduce operational task time by 80% - from several days of waiting for engineering support to 3 minutes of self-service execution
+- **Quality Improvement:** Decrease operational errors by 90% through standardized runbooks and API-based operations (vs direct database manipulation)
+- **Team Empowerment:** Enable 50% of operational requests to be executed independently by support team without engineering intervention
+- **Scalability:** Support growing case volume without proportional increase in engineering support tickets
 
-**Target Release:** Q1 2025
+**Target Release:** Q4 2025
 
 **Epic Owner:** Engineering Team
 
@@ -34,7 +34,7 @@ Build an operational automation assistant that helps support engineers execute p
 
 ### Story 1: Repository Setup and Project Initialization
 
-**Story ID:** PROD-101  
+**Story ID:** LIMS2-101  
 **Story Points:** 2  
 **Priority:** Highest  
 **Dependencies:** None
@@ -44,7 +44,7 @@ Build an operational automation assistant that helps support engineers execute p
 As a **DevOps Engineer**, I want to set up the Git repository with proper structure and build configuration, so that the development team can start building the Production Support system.
 
 **Technical Details:**
-- Create GitHub repository: `production-support`
+- Create GitHub repository: `production-support-admin`
 - Initialize Maven project with Java 17
 - Set up Spring Boot 3.2.0 with required dependencies
 - Configure multi-profile support (local, dev, prod)
@@ -52,7 +52,7 @@ As a **DevOps Engineer**, I want to set up the Git repository with proper struct
 
 **Acceptance Criteria:**
 
-✅ Repository created at `https://github.com/[org]/production-support`  
+✅ Repository created at `https://github.com/[org]/production-support-admin`  
 ✅ Maven project builds successfully with `mvn clean package`  
 ✅ Spring Boot application starts on port 8093  
 ✅ Health endpoint responds: `GET /api/v1/health` returns "OK"  
@@ -69,30 +69,30 @@ As a **DevOps Engineer**, I want to set up the Git repository with proper struct
 
 ### Story 2: Infrastructure Provisioning - AWS ECS Setup
 
-**Story ID:** PROD-102  
+**Story ID:** LIMS2-102  
 **Story Points:** 5  
 **Priority:** High  
-**Dependencies:** PROD-101
+**Dependencies:** LIMS2-101
 
 **Description:**
 
 As a **DevOps Engineer**, I want to provision AWS infrastructure for Production Support service, so that the application can be deployed to production behind API Gateway.
 
 **Technical Details:**
-- Set up ECS Cluster: `ops-tools-cluster`
+- Set up ECS Cluster: `production-support-cluster`
 - Create ECS Task Definition for Fargate
 - Configure Application Load Balancer (internal)
-- Set up API Gateway integration at `xxx.apigtw.com/production-support`
+- Set up API Gateway integration at `lims.labcorp.com`
 - Configure CloudWatch logging and metrics
 - Set up auto-scaling policies
 
 **Acceptance Criteria:**
 
-✅ ECS cluster `ops-tools-cluster` created  
+✅ ECS cluster `production-support-cluster` created  
 ✅ Task definition supports 2 tasks minimum (512 CPU, 1024 MB memory)  
 ✅ ALB health checks pass for `/api/v1/health`  
-✅ API Gateway resource `/production-support/{proxy+}` configured  
-✅ CloudWatch log group `/ecs/production-support` created with 90-day retention  
+✅ API Gateway resource `/production-support-admin/{proxy+}` configured  
+✅ CloudWatch log group `/ecs/production-support-admin` created with 90-day retention  
 ✅ Auto-scaling configured (min: 2, max: 10, target CPU: 70%)  
 ✅ Security groups allow traffic: API Gateway → ALB → ECS tasks  
 ✅ ECS tasks run in private subnets (no public IP)  
@@ -108,14 +108,14 @@ As a **DevOps Engineer**, I want to provision AWS infrastructure for Production 
 
 ### Story 3: Natural Language Classification and Entity Extraction
 
-**Story ID:** PROD-103  
+**Story ID:** LIMS2-103  
 **Story Points:** 8  
 **Priority:** High  
-**Dependencies:** PROD-101
+**Dependencies:** LIMS2-101
 
 **Description:**
 
-As a **Backend Engineer**, I want to build a pattern-based classifier that parses natural language queries and extracts entities, so that user queries can be automatically converted into structured operations.
+As a **Backend Engineer**, I want to build a pattern-based classifier that parses natural language queries and extracts entities, so that support team queries can be automatically converted into structured operations.
 
 **Technical Details:**
 - Implement `PatternClassifier` service with keyword/regex matching
@@ -146,14 +146,14 @@ As a **Backend Engineer**, I want to build a pattern-based classifier that parse
 
 ### Story 4: Cancel Case Runbook and API Integration
 
-**Story ID:** PROD-104  
+**Story ID:** LIMS2-104  
 **Story Points:** 5  
 **Priority:** High  
-**Dependencies:** PROD-103
+**Dependencies:** LIMS2-103
 
 **Description:**
 
-As a **Backend Engineer**, I want to implement the Cancel Case operation with runbook-driven execution, so that support engineers can safely cancel pathology cases with proper pre-checks and post-checks.
+As a **Backend Engineer**, I want to implement the Cancel Case operation with runbook-driven execution, so that support team can safely cancel pathology cases with proper pre-checks and post-checks.
 
 **Technical Details:**
 - Create `cancel-case-runbook.md` with steps (precheck, procedure, postcheck, rollback)
@@ -184,14 +184,14 @@ As a **Backend Engineer**, I want to implement the Cancel Case operation with ru
 
 ### Story 5: Update Case Status Runbook and API Integration
 
-**Story ID:** PROD-105  
+**Story ID:** LIMS2-105  
 **Story Points:** 5  
 **Priority:** High  
-**Dependencies:** PROD-103
+**Dependencies:** LIMS2-103
 
 **Description:**
 
-As a **Backend Engineer**, I want to implement the Update Case Status operation with runbook execution, so that support engineers can update case workflow statuses safely.
+As a **Backend Engineer**, I want to implement the Update Case Status operation with runbook execution, so that support team can update case workflow statuses safely.
 
 **Technical Details:**
 - Create `update-case-status-runbook.md` with validation steps
@@ -207,7 +207,7 @@ As a **Backend Engineer**, I want to implement the Update Case Status operation 
 ✅ Pre-check: Validate target status is valid  
 ✅ Procedure: Update status via `PATCH /api/cases/{case_id}`  
 ✅ Post-check: Verify status updated successfully  
-✅ Supports 13+ status values (pending, accessioning, grossing, etc.)  
+✅ Supports actual case status values (pending, accessioning, grossing, etc.)  
 ✅ Extracts both case_id and status from query  
 ✅ Warning shown if status is not extracted from query  
 ✅ API endpoint returns runbook for "update status to X for case Y"  
@@ -222,10 +222,10 @@ As a **Backend Engineer**, I want to implement the Update Case Status operation 
 
 ### Story 6: Fallback UI for Undetected Query Patterns
 
-**Story ID:** PROD-106  
+**Story ID:** LIMS2-106  
 **Story Points:** 3  
 **Priority:** Medium  
-**Dependencies:** PROD-103, PROD-104, PROD-105
+**Dependencies:** LIMS2-103, LIMS2-104, LIMS2-105
 
 **Description:**
 
@@ -258,10 +258,10 @@ As a **Backend Engineer**, I want to provide an API endpoint that returns availa
 
 ### Story 7: Step Execution Service and Downstream API Integration
 
-**Story ID:** PROD-107  
+**Story ID:** LIMS2-107  
 **Story Points:** 8  
 **Priority:** High  
-**Dependencies:** PROD-104, PROD-105
+**Dependencies:** LIMS2-104, LIMS2-105
 
 **Description:**
 
@@ -297,10 +297,10 @@ As a **Backend Engineer**, I want to implement step execution that makes actual 
 
 ### Story 8: JWT Authentication and Authorization
 
-**Story ID:** PROD-108  
+**Story ID:** LIMS2-108  
 **Story Points:** 5  
 **Priority:** High  
-**Dependencies:** PROD-101
+**Dependencies:** LIMS2-101
 
 **Description:**
 
@@ -336,10 +336,10 @@ As a **Backend Engineer**, I want to implement JWT-based authentication with rol
 
 ### Story 9: OpenAPI/Swagger Documentation
 
-**Story ID:** PROD-109  
+**Story ID:** LIMS2-109  
 **Story Points:** 3  
 **Priority:** Medium  
-**Dependencies:** PROD-103, PROD-104, PROD-105, PROD-107
+**Dependencies:** LIMS2-103, LIMS2-104, LIMS2-105, LIMS2-107
 
 **Description:**
 
@@ -378,7 +378,7 @@ As a **Backend Engineer**, I want to add comprehensive API documentation with Sw
 **Story ID:** PROD-110  
 **Story Points:** 5  
 **Priority:** High  
-**Dependencies:** PROD-103, PROD-109
+**Dependencies:** LIMS2-103, LIMS2-109
 
 **Description:**
 
@@ -417,7 +417,7 @@ As a **Frontend Engineer**, I want to build a UI that accepts natural language q
 **Story ID:** PROD-111  
 **Story Points:** 3  
 **Priority:** Medium  
-**Dependencies:** PROD-106, PROD-110
+**Dependencies:** LIMS2-106, PROD-110
 
 **Description:**
 
@@ -455,7 +455,7 @@ As a **Frontend Engineer**, I want to display available task options when patter
 **Story ID:** PROD-112  
 **Story Points:** 8  
 **Priority:** High  
-**Dependencies:** PROD-107, PROD-110
+**Dependencies:** LIMS2-107, PROD-110
 
 **Description:**
 
@@ -499,7 +499,7 @@ As a **Frontend Engineer**, I want to display runbook steps with execution contr
 **Story ID:** PROD-113  
 **Story Points:** 2  
 **Priority:** High  
-**Dependencies:** PROD-101, PROD-110
+**Dependencies:** LIMS2-101, PROD-110
 
 **Description:**
 
@@ -534,7 +534,7 @@ As a **Backend Engineer**, I want to configure CORS to allow frontend access, so
 **Story ID:** PROD-114  
 **Story Points:** 3  
 **Priority:** Medium  
-**Dependencies:** PROD-101
+**Dependencies:** LIMS2-101
 
 **Description:**
 
@@ -620,23 +620,23 @@ As a **Technical Writer**, I want to create comprehensive documentation covering
 ### Development Timeline (Estimated)
 
 **Sprint 1 (2 weeks):**
-- PROD-101: Repository Setup (2 points)
-- PROD-103: Classification and Entity Extraction (8 points)
+- LIMS2-101: Repository Setup (2 points)
+- LIMS2-103: Classification and Entity Extraction (8 points)
 - PROD-113: CORS Configuration (2 points)
 - PROD-114: Validation and Error Handling (3 points)
 - **Sprint Total:** 15 points
 
 **Sprint 2 (2 weeks):**
-- PROD-104: Cancel Case Runbook (5 points)
-- PROD-105: Update Case Status Runbook (5 points)
-- PROD-107: Step Execution Service (8 points)
+- LIMS2-104: Cancel Case Runbook (5 points)
+- LIMS2-105: Update Case Status Runbook (5 points)
+- LIMS2-107: Step Execution Service (8 points)
 - **Sprint Total:** 18 points
 
 **Sprint 3 (2 weeks):**
-- PROD-102: Infrastructure Provisioning (5 points)
-- PROD-108: JWT Authentication (5 points)
-- PROD-109: Swagger Documentation (3 points)
-- PROD-106: Fallback API (3 points)
+- LIMS2-102: Infrastructure Provisioning (5 points)
+- LIMS2-108: JWT Authentication (5 points)
+- LIMS2-109: Swagger Documentation (3 points)
+- LIMS2-106: Fallback API (3 points)
 - **Sprint Total:** 16 points
 
 **Sprint 4 (2 weeks):**
@@ -691,20 +691,20 @@ As a **Technical Writer**, I want to create comprehensive documentation covering
 
 | Story | Depends On |
 |-------|------------|
-| PROD-101 | None |
-| PROD-102 | PROD-101 |
-| PROD-103 | PROD-101 |
-| PROD-104 | PROD-103 |
-| PROD-105 | PROD-103 |
-| PROD-106 | PROD-103, PROD-104, PROD-105 |
-| PROD-107 | PROD-104, PROD-105 |
-| PROD-108 | PROD-101 |
-| PROD-109 | PROD-103, PROD-104, PROD-105, PROD-107 |
-| PROD-110 | PROD-103, PROD-109 |
-| PROD-111 | PROD-106, PROD-110 |
-| PROD-112 | PROD-107, PROD-110 |
-| PROD-113 | PROD-101, PROD-110 |
-| PROD-114 | PROD-101 |
+| LIMS2-101 | None |
+| LIMS2-102 | LIMS2-101 |
+| LIMS2-103 | LIMS2-101 |
+| LIMS2-104 | LIMS2-103 |
+| LIMS2-105 | LIMS2-103 |
+| LIMS2-106 | LIMS2-103, LIMS2-104, LIMS2-105 |
+| LIMS2-107 | LIMS2-104, LIMS2-105 |
+| LIMS2-108 | LIMS2-101 |
+| LIMS2-109 | LIMS2-103, LIMS2-104, LIMS2-105, LIMS2-107 |
+| PROD-110 | LIMS2-103, LIMS2-109 |
+| PROD-111 | LIMS2-106, PROD-110 |
+| PROD-112 | LIMS2-107, PROD-110 |
+| PROD-113 | LIMS2-101, PROD-110 |
+| PROD-114 | LIMS2-101 |
 | PROD-115 | All stories |
 
 ---
