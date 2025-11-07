@@ -16,19 +16,7 @@ Complete cancellation of a case including cleanup of associated workflows, notif
    GET /api/v1/users/{user_id}/permissions/cancel_case
    ```
 
-2. **Verify Case Exists**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
-
-3. **Check Case Not Already Cancelled**
-   ```bash
-   GET /api/v2/cases/{case_id}/status
-   ```
-
-## Procedure
-
-1. **Preview Cancellation Impact**
+2. **Preview Cancellation Impact**
    ```bash
    GET /api/v2/cases/{case_id}/cancel/preview
    Headers:
@@ -36,7 +24,15 @@ Complete cancellation of a case including cleanup of associated workflows, notif
      X-User-ID: {user_id}
    ```
 
-2. **Execute Case Cancellation**
+**Note:** The preview API validates that:
+- Case exists
+- Case is not already cancelled
+- Case has no blocking dependencies
+- Returns impact assessment before actual cancellation
+
+## Procedure
+
+1. **Execute Case Cancellation**
    ```bash
    POST /api/v2/cases/{case_id}/cancel
    Headers:

@@ -214,21 +214,31 @@ Body:
 - Non-destructive operations
 - GET requests or validation logic
 
+**Best Practice:** Use preview/validation APIs that combine multiple checks
+
 **Example:**
 ```markdown
 ## Pre-checks
 
-1. **Verify Case Exists**
+1. **Verify User Has Permissions**
    ```bash
-   GET /api/v2/cases/{case_id}
+   GET /api/v1/users/{user_id}/permissions/cancel_case
    ```
 
-2. **Check Case Status**
+2. **Preview Operation Impact**
    ```bash
-   GET /api/v2/cases/{case_id}/status
-   # Expected: status != "cancelled"
+   GET /api/v2/cases/{case_id}/cancel/preview
+   Headers:
+     Authorization: Bearer {token}
    ```
+
+**Note:** The preview API validates that:
+- Case exists
+- Case is not already cancelled
+- No blocking dependencies exist
 ```
+
+**Why?** Consolidate multiple validation checks into one API call for efficiency.
 
 ### Procedure
 **Purpose:** Main operation steps
