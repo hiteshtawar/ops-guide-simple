@@ -64,13 +64,6 @@ public class ProductionSupportOrchestrator {
     }
     
     /**
-     * Get steps for a specific stage (precheck, procedure, postcheck, rollback)
-     */
-    public List<RunbookStep> getStepsForStage(String taskId, String stage) {
-        return runbookParser.getSteps(taskId, stage);
-    }
-    
-    /**
      * Get all available task types
      * Useful for UI to display options when pattern detection fails
      */

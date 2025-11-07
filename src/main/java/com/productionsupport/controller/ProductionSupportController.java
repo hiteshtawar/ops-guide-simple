@@ -119,43 +119,6 @@ public class ProductionSupportController {
     }
     
     @Operation(
-        summary = "Get Runbook Steps",
-        description = "Retrieve runbook steps for a specific task. Optionally filter by stage (precheck, procedure, postcheck, rollback)."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Successfully retrieved steps",
-            content = @Content(
-                mediaType = MediaType.APPLICATION_JSON_VALUE,
-                schema = @Schema(implementation = RunbookStep.class)
-            )
-        )
-    })
-    @GetMapping("/tasks/{taskId}/steps")
-    public ResponseEntity<List<RunbookStep>> getSteps(
-        @Parameter(
-            description = "Task identifier (e.g., CANCEL_CASE, UPDATE_CASE_STATUS)",
-            required = true,
-            example = "CANCEL_CASE"
-        )
-        @PathVariable String taskId,
-        
-        @Parameter(
-            description = "Filter steps by stage (precheck, procedure, postcheck, rollback)",
-            required = false,
-            example = "precheck"
-        )
-        @RequestParam(required = false) String stage
-    ) {
-        log.info("Getting steps for task: {}, stage: {}", taskId, stage);
-        
-        List<RunbookStep> steps = orchestrator.getStepsForStage(taskId, stage);
-        
-        return ResponseEntity.ok(steps);
-    }
-    
-    @Operation(
         summary = "Execute Runbook Step",
         description = "Execute a specific step from a runbook. This will make the actual API call to the downstream service and return the result. " +
                      "Requires 'production_support' or 'support_admin' role."
@@ -202,43 +165,4 @@ public class ProductionSupportController {
         return ResponseEntity.ok(response);
     }
     
-    @Operation(
-        summary = "Classify Query Only",
-        description = "Lightweight endpoint that classifies the query and extracts entities without returning full runbook steps. " +
-                     "Useful for preview or validation purposes."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Successfully classified the query",
-            content = @Content(
-                mediaType = MediaType.APPLICATION_JSON_VALUE,
-                schema = @Schema(implementation = OperationalResponse.class)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid request - query is required",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
-        )
-    })
-    @PostMapping("/classify")
-    public ResponseEntity<OperationalResponse> classifyOnly(
-        @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Operational request containing the natural language query to classify",
-            required = true,
-            content = @Content(schema = @Schema(implementation = OperationalRequest.class))
-        )
-        @Valid @RequestBody OperationalRequest request
-    ) {
-        log.info("Classifying query: {}", request.getQuery());
-        
-        // Process but only return classification, not full steps
-        OperationalResponse response = orchestrator.processRequest(request);
-        
-        // Clear steps to return lightweight response
-        response.setSteps(null);
-        
-        return ResponseEntity.ok(response);
-    }
 }
