@@ -1,8 +1,9 @@
-package com.productionsupport.service;
+package com.lca.productionsupport.service;
 
-import com.productionsupport.model.OperationalResponse.RunbookStep;
-import com.productionsupport.model.StepExecutionRequest;
-import com.productionsupport.model.StepExecutionResponse;
+import com.lca.productionsupport.config.WebClientRegistry;
+import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
+import com.lca.productionsupport.model.StepExecutionRequest;
+import com.lca.productionsupport.model.StepExecutionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,7 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StepExecutionService {
 
-    private final WebClient webClient;
+    private final WebClientRegistry webClientRegistry;
     private final RunbookParser runbookParser;
     
     /**
@@ -30,6 +31,19 @@ public class StepExecutionService {
      */
     public StepExecutionResponse executeStep(StepExecutionRequest request) {
         long startTime = System.currentTimeMillis();
+        
+        // Get the WebClient for the downstream service
+        WebClient webClient;
+        try {
+            webClient = webClientRegistry.getWebClient(request.getDownstreamService());
+        } catch (IllegalArgumentException e) {
+            return StepExecutionResponse.builder()
+                .success(false)
+                .stepNumber(request.getStepNumber())
+                .errorMessage("Downstream service not configured: " + request.getDownstreamService())
+                .durationMs(System.currentTimeMillis() - startTime)
+                .build();
+        }
         
         // Get the step definition from runbook
         RunbookStep step = runbookParser.getStep(request.getTaskId(), request.getStepNumber());
@@ -43,7 +57,9 @@ public class StepExecutionService {
                 .build();
         }
         
-        log.info("Executing step {}: {} {}", request.getStepNumber(), step.getMethod(), step.getPath());
+        log.info("Executing step {} for service {}: {} {}", 
+                request.getStepNumber(), request.getDownstreamService(), 
+                step.getMethod(), step.getPath());
         
         // Replace placeholders in path and body
         String resolvedPath = resolvePlaceholders(step.getPath(), request.getEntities());
@@ -51,13 +67,18 @@ public class StepExecutionService {
             resolvePlaceholders(step.getRequestBody(), request.getEntities()) : null;
         
         try {
+            // Get timeout for this service
+            Duration timeout = webClientRegistry.getTimeout(request.getDownstreamService());
+            
             // Build and execute the request
             String responseBody = executeHttpRequest(
+                webClient,
                 step.getMethod(),
                 resolvedPath,
                 resolvedBody,
                 request.getAuthToken(),
-                request.getUserId()
+                request.getUserId(),
+                timeout
             );
             
             long duration = System.currentTimeMillis() - startTime;
@@ -87,8 +108,8 @@ public class StepExecutionService {
     /**
      * Execute HTTP request based on method
      */
-    private String executeHttpRequest(String method, String path, String body, 
-                                     String authToken, String userId) {
+    private String executeHttpRequest(WebClient webClient, String method, String path, 
+                                     String body, String authToken, String userId, Duration timeout) {
         
         WebClient.RequestHeadersSpec<?> request;
         
@@ -140,7 +161,7 @@ public class StepExecutionService {
                     .flatMap(errorBody -> Mono.error(new RuntimeException("API Error: " + errorBody)))
             )
             .bodyToMono(String.class)
-            .timeout(Duration.ofSeconds(30))
+            .timeout(timeout)
             .block();
     }
     

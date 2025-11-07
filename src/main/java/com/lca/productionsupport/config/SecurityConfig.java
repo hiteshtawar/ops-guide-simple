@@ -1,4 +1,4 @@
-package com.productionsupport.config;
+package com.lca.productionsupport.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

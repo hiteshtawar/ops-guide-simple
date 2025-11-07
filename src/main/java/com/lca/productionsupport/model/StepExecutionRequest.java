@@ -1,4 +1,4 @@
-package com.productionsupport.model;
+package com.lca.productionsupport.model;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,6 +23,12 @@ public class StepExecutionRequest {
      */
     @NotBlank(message = "Task ID is required")
     private String taskId;
+    
+    /**
+     * Downstream service to route the request to
+     */
+    @Builder.Default
+    private String downstreamService = "ap-services";
     
     /**
      * Step number to execute

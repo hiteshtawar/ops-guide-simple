@@ -1,4 +1,4 @@
-package com.productionsupport;
+package com.lca.productionsupport;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

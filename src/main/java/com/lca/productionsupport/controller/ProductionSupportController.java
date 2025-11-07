@@ -1,12 +1,13 @@
-package com.productionsupport.controller;
+package com.lca.productionsupport.controller;
 
-import com.productionsupport.model.OperationalRequest;
-import com.productionsupport.model.OperationalResponse;
-import com.productionsupport.model.OperationalResponse.RunbookStep;
-import com.productionsupport.model.StepExecutionRequest;
-import com.productionsupport.model.StepExecutionResponse;
-import com.productionsupport.service.ProductionSupportOrchestrator;
-import com.productionsupport.service.StepExecutionService;
+import com.lca.productionsupport.model.OperationalRequest;
+import com.lca.productionsupport.model.OperationalResponse;
+import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
+import com.lca.productionsupport.model.StepExecutionRequest;
+import com.lca.productionsupport.model.StepExecutionResponse;
+import com.lca.productionsupport.model.TaskType;
+import com.lca.productionsupport.service.ProductionSupportOrchestrator;
+import com.lca.productionsupport.service.StepExecutionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -111,7 +112,7 @@ public class ProductionSupportController {
         
         OperationalResponse response = orchestrator.processRequest(request);
         
-        if ("UNKNOWN".equals(response.getTaskId())) {
+        if (TaskType.UNKNOWN.name().equals(response.getTaskId())) {
             log.warn("Could not classify request: {}", request.getQuery());
         }
         

@@ -5,15 +5,17 @@ spring:
 server:
   port: 8093
 
-# Case Management API Configuration
-case-management:
-  api:
-    base-url: https://api.example.com/v2
+# Downstream Services Configuration
+downstream-services:
+  services:
+    ap-services:
+      base-url: https://api.example.com/v2
+      timeout: 30
 
 # Logging
 logging:
   level:
-    com.productionsupport: INFO
+    com.lca.productionsupport: INFO
     org.springframework.web: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

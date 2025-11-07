@@ -8,7 +8,8 @@ curl -X POST http://localhost:8080/api/v1/process \
   -H "Content-Type: application/json" \
   -d '{
     "query": "Cancel case CASE-2024-001",
-    "userId": "ops123"
+    "userId": "ops123",
+    "downstreamService": "ap-services"
   }'
 ```
 
@@ -17,6 +18,7 @@ curl -X POST http://localhost:8080/api/v1/process \
 {
   "taskId": "CANCEL_CASE",
   "taskName": "Cancel Case",
+  "downstreamService": "ap-services",
   "extractedEntities": {
     "case_id": "CASE-2024-001"
   },
@@ -57,7 +59,8 @@ curl -X POST http://localhost:8080/api/v1/process \
   -H "Content-Type: application/json" \
   -d '{
     "query": "Update case CASE-2024-005 status to completed",
-    "userId": "pathologist456"
+    "userId": "pathologist456",
+    "downstreamService": "ap-services"
   }'
 ```
 
@@ -66,6 +69,7 @@ curl -X POST http://localhost:8080/api/v1/process \
 {
   "taskId": "UPDATE_CASE_STATUS",
   "taskName": "Update Case Status",
+  "downstreamService": "ap-services",
   "extractedEntities": {
     "case_id": "CASE-2024-005",
     "status": "completed"
@@ -105,6 +109,7 @@ curl -X POST http://localhost:8080/api/v1/execute-step \
   -H "Content-Type: application/json" \
   -d '{
     "taskId": "CANCEL_CASE",
+    "downstreamService": "ap-services",
     "stepNumber": 1,
     "entities": {
       "case_id": "CASE-2024-001",

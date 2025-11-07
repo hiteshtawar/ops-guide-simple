@@ -1,4 +1,4 @@
-package com.productionsupport.model;
+package com.lca.productionsupport.model;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -38,5 +38,14 @@ public class OperationalRequest {
      * Use GET /api/v1/tasks to fetch available task IDs
      */
     private String taskId;
+    
+    /**
+     * Downstream service that this request should be routed to
+     * Examples: "ap-services", "case-management-service", etc.
+     * 
+     * If not provided, defaults to "ap-services"
+     */
+    @Builder.Default
+    private String downstreamService = "ap-services";
 }
 

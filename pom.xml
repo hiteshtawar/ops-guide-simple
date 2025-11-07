@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.productionsupport</groupId>
+    <groupId>com.lca.productionsupport</groupId>
     <artifactId>production-support</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <name>Production Support</name>

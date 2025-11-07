@@ -1,4 +1,4 @@
-package com.productionsupport.model;
+package com.lca.productionsupport.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

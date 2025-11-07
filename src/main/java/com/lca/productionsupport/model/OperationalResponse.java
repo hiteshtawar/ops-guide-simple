@@ -1,4 +1,4 @@
-package com.productionsupport.model;
+package com.lca.productionsupport.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +26,11 @@ public class OperationalResponse {
      * Human-readable task name
      */
     private String taskName;
+    
+    /**
+     * Downstream service that handles this task
+     */
+    private String downstreamService;
     
     /**
      * Extracted entities (case_id, status, etc.)

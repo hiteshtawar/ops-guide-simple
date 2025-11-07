@@ -1,6 +1,6 @@
-package com.productionsupport.service;
+package com.lca.productionsupport.service;
 
-import com.productionsupport.model.TaskType;
+import com.lca.productionsupport.model.TaskType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

@@ -1,10 +1,10 @@
-package com.productionsupport.service;
+package com.lca.productionsupport.service;
 
-import com.productionsupport.model.OperationalRequest;
-import com.productionsupport.model.OperationalResponse;
-import com.productionsupport.model.OperationalResponse.RunbookStep;
-import com.productionsupport.model.TaskType;
-import com.productionsupport.service.PatternClassifier.ClassificationResult;
+import com.lca.productionsupport.model.OperationalRequest;
+import com.lca.productionsupport.model.OperationalResponse;
+import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
+import com.lca.productionsupport.model.TaskType;
+import com.lca.productionsupport.service.PatternClassifier.ClassificationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,8 @@ public class ProductionSupportOrchestrator {
      * Process an operational request and return next steps
      */
     public OperationalResponse processRequest(OperationalRequest request) {
-        log.info("Processing request: {}", request.getQuery());
+        log.info("Processing request: {} for downstream service: {}", 
+                request.getQuery(), request.getDownstreamService());
         
         // Step 1: Classify the request (or use explicit taskId if provided)
         TaskType taskType;
@@ -60,6 +61,7 @@ public class ProductionSupportOrchestrator {
         return OperationalResponse.builder()
             .taskId(taskType.name())
             .taskName(taskType.getDisplayName())
+            .downstreamService(request.getDownstreamService())
             .extractedEntities(entities)
             .steps(stepGroups)
             .warnings(warnings)

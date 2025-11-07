@@ -11,12 +11,14 @@ spring:
           # Secret must match the one used to sign the test token
           jwk-set-uri: # Leave commented for dev
 
-case-management:
-  api:
-    base-url: https://dev-api.example.com/v2
+downstream-services:
+  services:
+    ap-services:
+      base-url: https://dev-api.example.com/v2
+      timeout: 30
 
 logging:
   level:
-    com.productionsupport: DEBUG
+    com.lca.productionsupport: DEBUG
     org.springframework.web: DEBUG
 

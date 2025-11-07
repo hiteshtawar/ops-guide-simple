@@ -198,7 +198,8 @@ Content-Type: application/json
 
 {
   "query": "please cancel case 2025123P6732",
-  "userId": "engineer@example.com"
+  "userId": "engineer@example.com",
+  "downstreamService": "ap-services"
 }
 ```
 
@@ -208,6 +209,7 @@ Content-Type: application/json
 {
   "taskId": "CANCEL_CASE",
   "taskName": "Cancel Case",
+  "downstreamService": "ap-services",
   "extractedEntities": {
     "case_id": "2025123P6732"
   },
@@ -252,13 +254,15 @@ Content-Type: application/json
 server:
   port: 8093
 
-case-management:
-  api:
-    base-url: https://dev-api.example.com/v2
+downstream-services:
+  services:
+    ap-services:
+      base-url: https://dev-api.example.com/v2
+      timeout: 30
 
 logging:
   level:
-    com.opsguide: DEBUG
+    com.lca.productionsupport: DEBUG
 ```
 
 **Production** (`application-prod.yml`):
@@ -266,20 +270,23 @@ logging:
 server:
   port: 8093
 
-case-management:
-  api:
-    base-url: https://api.example.com/v2
+downstream-services:
+  services:
+    ap-services:
+      base-url: https://api.example.com/v2
+      timeout: 30
 
 logging:
   level:
-    com.opsguide: INFO
+    com.lca.productionsupport: INFO
 ```
 
 ### Environment Variables
 
 ```bash
 SPRING_PROFILES_ACTIVE=prod
-CASE_MANAGEMENT_API_BASE_URL=https://api.example.com/v2
+DOWNSTREAM_SERVICES_SERVICES_AP_SERVICES_BASE_URL=https://api.example.com/v2
+DOWNSTREAM_SERVICES_SERVICES_AP_SERVICES_TIMEOUT=30
 API_KEY=your-secret-api-key
 ```
 

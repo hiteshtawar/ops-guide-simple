@@ -1,4 +1,4 @@
-package com.productionsupport.model;
+package com.lca.productionsupport.model;
 
 /**
  * Enum for supported operational task types
