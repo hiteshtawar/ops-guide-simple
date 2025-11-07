@@ -137,8 +137,10 @@ public class RunbookParser {
                     codeBlock.append(line).append("\n");
                 } else if (currentSection != null && !line.trim().isEmpty() && !line.startsWith("#")) {
                     // Capture step description (text before code block)
-                    if (line.matches("^\\d+\\.\\s+\\*\\*(.+)\\*\\*$")) {
-                        stepDescription.append(line).append(" ");
+                    // Pattern: "1. **Step Name**" -> extract just "Step Name"
+                    if (line.matches("^\\d+\\.\\s+\\*\\*(.+)\\*\\*.*$")) {
+                        String match = line.replaceAll("^\\d+\\.\\s+\\*\\*(.+)\\*\\*.*$", "$1").trim();
+                        stepDescription.append(match);
                     }
                 }
             }

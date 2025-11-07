@@ -207,7 +207,7 @@ Body:
 ## Step Types (Sections)
 
 ### Pre-checks
-**Purpose:** Validate preconditions before execution
+**Purpose:** Check user permissions and validate preconditions before execution
 
 **Characteristics:**
 - `autoExecutable: true` (usually)
