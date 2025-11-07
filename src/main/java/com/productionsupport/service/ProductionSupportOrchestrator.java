@@ -48,17 +48,20 @@ public class ProductionSupportOrchestrator {
         }
         
         // Step 2: Get runbook steps for the classified task
-        List<RunbookStep> steps = runbookParser.getSteps(taskType.name(), null);
+        List<RunbookStep> allSteps = runbookParser.getSteps(taskType.name(), null);
         
-        // Step 3: Build warnings
+        // Step 3: Group steps by type
+        OperationalResponse.StepGroups stepGroups = groupStepsByType(allSteps);
+        
+        // Step 4: Build warnings
         List<String> warnings = buildWarnings(taskType, entities);
         
-        // Step 4: Build response
+        // Step 5: Build response
         return OperationalResponse.builder()
             .taskId(taskType.name())
             .taskName(taskType.getDisplayName())
             .extractedEntities(entities)
-            .steps(steps)
+            .steps(stepGroups)
             .warnings(warnings)
             .build();
     }
@@ -93,6 +96,32 @@ public class ProductionSupportOrchestrator {
             case UPDATE_CASE_STATUS -> "Update case workflow status. Type: update case status to pending 2025P1234 and hit Send";
             default -> "Unknown task type";
         };
+    }
+    
+    /**
+     * Group steps by their type
+     */
+    private OperationalResponse.StepGroups groupStepsByType(List<RunbookStep> allSteps) {
+        List<RunbookStep> prechecks = new ArrayList<>();
+        List<RunbookStep> procedure = new ArrayList<>();
+        List<RunbookStep> postchecks = new ArrayList<>();
+        List<RunbookStep> rollback = new ArrayList<>();
+        
+        for (RunbookStep step : allSteps) {
+            switch (step.getStepType().toLowerCase()) {
+                case "precheck" -> prechecks.add(step);
+                case "procedure" -> procedure.add(step);
+                case "postcheck" -> postchecks.add(step);
+                case "rollback" -> rollback.add(step);
+            }
+        }
+        
+        return OperationalResponse.StepGroups.builder()
+            .prechecks(prechecks.isEmpty() ? null : prechecks)
+            .procedure(procedure.isEmpty() ? null : procedure)
+            .postchecks(postchecks.isEmpty() ? null : postchecks)
+            .rollback(rollback.isEmpty() ? null : rollback)
+            .build();
     }
     
     /**

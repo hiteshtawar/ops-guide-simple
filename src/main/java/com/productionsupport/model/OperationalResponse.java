@@ -33,14 +33,25 @@ public class OperationalResponse {
     private Map<String, String> extractedEntities;
     
     /**
-     * Steps to execute from the runbook
+     * Steps grouped by type (prechecks, procedure, postchecks, rollback)
      */
-    private List<RunbookStep> steps;
+    private StepGroups steps;
     
     /**
      * Any warnings or notes
      */
     private List<String> warnings;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StepGroups {
+        private List<RunbookStep> prechecks;
+        private List<RunbookStep> procedure;
+        private List<RunbookStep> postchecks;
+        private List<RunbookStep> rollback;
+    }
 
     @Data
     @Builder
