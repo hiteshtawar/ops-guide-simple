@@ -2,15 +2,6 @@
 server:
   port: 8093
 
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          # For dev, use symmetric key to validate test JWT tokens
-          # Secret must match the one used to sign the test token
-          jwk-set-uri: # Leave commented for dev
-
 downstream-services:
   services:
     ap-services:

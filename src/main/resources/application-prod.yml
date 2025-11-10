@@ -2,15 +2,6 @@
 server:
   port: 8093
 
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          # jwk-set-uri: https://your-auth-server.com/.well-known/jwks.json
-          # issuer-uri: https://your-auth-server.com
-          # For API Gateway forwarded JWT, configure accordingly
-
 downstream-services:
   services:
     ap-services:

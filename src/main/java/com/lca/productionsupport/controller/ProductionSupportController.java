@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -76,7 +75,7 @@ public class ProductionSupportController {
         summary = "Process Natural Language Query",
         description = "Accepts a natural language query, classifies the intent, extracts entities, and returns a structured runbook with executable steps. " +
                      "Examples: 'cancel case 2025123P6732', 'update case status to pending 2024123P6731'. " +
-                     "Requires 'production_support' or 'support_admin' role."
+                     "Authentication handled by API Gateway."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -91,14 +90,8 @@ public class ProductionSupportController {
             responseCode = "400",
             description = "Invalid request - query is required and cannot be empty",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
-        ),
-        @ApiResponse(
-            responseCode = "403",
-            description = "Forbidden - insufficient permissions",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
         )
     })
-    @PreAuthorize("hasAnyRole('production_support', 'support_admin')")
     @PostMapping("/process")
     public ResponseEntity<OperationalResponse> processRequest(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -122,7 +115,7 @@ public class ProductionSupportController {
     @Operation(
         summary = "Execute Runbook Step",
         description = "Execute a specific step from a runbook. This will make the actual API call to the downstream service and return the result. " +
-                     "Requires 'production_support' or 'support_admin' role."
+                     "Authentication handled by API Gateway."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -139,17 +132,11 @@ public class ProductionSupportController {
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
         ),
         @ApiResponse(
-            responseCode = "403",
-            description = "Forbidden - insufficient permissions",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
-        ),
-        @ApiResponse(
             responseCode = "500",
             description = "Step execution failed",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE)
         )
     })
-    @PreAuthorize("hasAnyRole('production_support', 'support_admin')")
     @PostMapping("/execute-step")
     public ResponseEntity<StepExecutionResponse> executeStep(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
