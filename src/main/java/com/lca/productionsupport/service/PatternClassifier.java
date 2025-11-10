@@ -18,9 +18,10 @@ import java.util.regex.Pattern;
 public class PatternClassifier {
 
     // Regex patterns for entity extraction
-    // Matches formats like: CASE-2024-001, CASE2024001, 2025123P6732, 2024123P6731
+    // Matches formats like: 2025123P6732, 20251999746653, 2025020T115000
+    // Supports: pure numbers, numbers with P, numbers with T
     private static final Pattern CASE_ID_PATTERN = Pattern.compile(
-        "(?i)\\b(?:case[-_\\s]?)?([0-9]{4,}[Pp]?[0-9]+)\\b"
+        "(?i)\\b(?:case[-_\\s]?)?([0-9]{4,}[PpTt]?[0-9]+)\\b"
     );
     
     // Status pattern - more flexible, handles common typos

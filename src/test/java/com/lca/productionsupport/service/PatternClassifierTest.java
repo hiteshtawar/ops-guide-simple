@@ -273,6 +273,34 @@ class PatternClassifierTest {
         assertEquals("20241234", result.getEntities().get("case_id"));
     }
 
+    @Test
+    void classify_extractCaseId_allNumbers() {
+        PatternClassifier.ClassificationResult result = classifier.classify("cancel case 20251999746653");
+        
+        assertEquals("20251999746653", result.getEntities().get("case_id"));
+    }
+
+    @Test
+    void classify_extractCaseId_withT() {
+        PatternClassifier.ClassificationResult result = classifier.classify("cancel case 2025020T115000");
+        
+        assertEquals("2025020T115000", result.getEntities().get("case_id"));
+    }
+
+    @Test
+    void classify_extractCaseId_withP() {
+        PatternClassifier.ClassificationResult result = classifier.classify("cancel case 2025020P123457");
+        
+        assertEquals("2025020P123457", result.getEntities().get("case_id"));
+    }
+
+    @Test
+    void classify_extractCaseId_lowercaseT() {
+        PatternClassifier.ClassificationResult result = classifier.classify("cancel case 2025020t115000");
+        
+        assertEquals("2025020t115000", result.getEntities().get("case_id"));
+    }
+
     // ========== UNKNOWN Task Tests ==========
 
     @Test
