@@ -28,7 +28,7 @@ public class PatternClassifier {
     // Supports: pending, accessioning, grossing, embedding, staining, microtomy, pathologist review, rostering
     // Also supports "hold - X" pattern (e.g., "hold - microtomy", "hold - embedding")
     private static final Pattern STATUS_PATTERN = Pattern.compile(
-        "(?i)\\b(pending|accessioning?|grossing|embedding|staining|microtomy|pathologist[_\\s]?review|rostering|completed?|cancell?ed|hold[\\s\\-]+(?:microtomy|embedding))\\b"
+        "(?i)\\b(pending|accessioning?|grossing|embedding|staining|microtomy|pathologist[_\\s]?review|rostering|completed?|cancel(?:led|ed)|hold[\\s\\-]+(?:microtomy|embedding))\\b"
     );
     
     /**
@@ -165,7 +165,7 @@ public class PatternClassifier {
     private boolean containsStatus(String query) {
         String[] statuses = {"pending", "accession", "grossing", "embedding", 
                            "staining", "microtomy", "pathologist", "rostering",
-                           "hold", "completed", "cancelled", "cancel"};
+                           "hold", "completed", "canceled", "cancelled"};
         return containsAny(query, statuses);
     }
     
