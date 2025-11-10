@@ -25,8 +25,10 @@ public class PatternClassifier {
     );
     
     // Status pattern - more flexible, handles common typos
+    // Supports: pending, accessioning, grossing, embedding, staining, microtomy, pathologist review, rostering
+    // Also supports "hold - X" pattern (e.g., "hold - microtomy", "hold - embedding")
     private static final Pattern STATUS_PATTERN = Pattern.compile(
-        "(?i)\\b(pending|accessioning?|grossing|embedding|cutting|staining|microscopy|microtomy|pathologist[_\\s]?review|rostering|under[_\\s]?review|on[_\\s]?hold|completed?|cancell?ed|archived?|closed?)\\b"
+        "(?i)\\b(pending|accessioning?|grossing|embedding|staining|microtomy|pathologist[_\\s]?review|rostering|completed?|cancell?ed|hold[\\s\\-]+(?:microtomy|embedding))\\b"
     );
     
     /**
@@ -91,22 +93,21 @@ public class PatternClassifier {
      * Normalize status to standard format
      */
     private String normalizeStatus(String status) {
-        String normalized = status.toLowerCase()
-            .replaceAll("_", " ")
-            .replaceAll("\\s+", "_");
+        String normalized = status.toLowerCase().trim();
+        
+        // Normalize multiple spaces/dashes to single space
+        normalized = normalized.replaceAll("[\\s\\-]+", " ");
         
         // Fix common typos and variations
         if (normalized.startsWith("accession")) {
             return "accessioning";
         }
         if (normalized.contains("pathologist") && normalized.contains("review")) {
-            return "pathologist_review";
+            return "pathologist review";
         }
-        if (normalized.contains("review") && !normalized.contains("pathologist")) {
-            return "under_review";
-        }
-        if (normalized.contains("hold")) {
-            return "on_hold";
+        // Handle "hold - X" patterns (e.g., "hold - microtomy", "hold - embedding")
+        if (normalized.startsWith("hold ")) {
+            return normalized; // Keep as-is: "hold microtomy", "hold embedding"
         }
         
         return normalized;
@@ -162,9 +163,9 @@ public class PatternClassifier {
      * Check if query contains a status keyword
      */
     private boolean containsStatus(String query) {
-        String[] statuses = {"pending", "accession", "grossing", "embedding", "cutting", 
-                           "staining", "microscopy", "microtomy", "pathologist", "rostering",
-                           "review", "hold", "completed", "cancelled", "cancel", "archived", "closed"};
+        String[] statuses = {"pending", "accession", "grossing", "embedding", 
+                           "staining", "microtomy", "pathologist", "rostering",
+                           "hold", "completed", "cancelled", "cancel"};
         return containsAny(query, statuses);
     }
     

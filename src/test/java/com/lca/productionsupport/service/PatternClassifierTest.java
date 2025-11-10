@@ -123,18 +123,18 @@ class PatternClassifierTest {
 
     @Test
     void classify_updateStatus_withTransitionToKeyword() {
-        PatternClassifier.ClassificationResult result = classifier.classify("transition to microscopy 2024123P6731");
+        PatternClassifier.ClassificationResult result = classifier.classify("transition to microtomy 2024123P6731");
         
         assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
-        assertEquals("microscopy", result.getEntities().get("status"));
+        assertEquals("microtomy", result.getEntities().get("status"));
     }
 
     @Test
     void classify_updateStatus_withStatusAndActionVerb() {
-        PatternClassifier.ClassificationResult result = classifier.classify("mark case to cutting 2024123P6731");
+        PatternClassifier.ClassificationResult result = classifier.classify("mark case to staining 2024123P6731");
         
         assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
-        assertEquals("cutting", result.getEntities().get("status"));
+        assertEquals("staining", result.getEntities().get("status"));
     }
 
     @Test
@@ -163,17 +163,19 @@ class PatternClassifierTest {
     }
 
     @Test
-    void classify_normalizeStatus_underReview() {
-        PatternClassifier.ClassificationResult result = classifier.classify("update status to under review 2024123P6731");
+    void classify_normalizeStatus_holdMicrotomy() {
+        PatternClassifier.ClassificationResult result = classifier.classify("update status to hold - microtomy 2024123P6731");
         
-        assertEquals("under_review", result.getEntities().get("status"));
+        assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
+        assertEquals("hold microtomy", result.getEntities().get("status"));
     }
 
     @Test
-    void classify_normalizeStatus_onHold() {
-        PatternClassifier.ClassificationResult result = classifier.classify("update status to on hold 2024123P6731");
+    void classify_normalizeStatus_holdEmbedding() {
+        PatternClassifier.ClassificationResult result = classifier.classify("update status to hold - embedding 2024123P6731");
         
-        assertEquals("on_hold", result.getEntities().get("status"));
+        assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
+        assertEquals("hold embedding", result.getEntities().get("status"));
     }
 
     @Test
@@ -191,20 +193,6 @@ class PatternClassifierTest {
     }
 
     @Test
-    void classify_normalizeStatus_archived() {
-        PatternClassifier.ClassificationResult result = classifier.classify("update status to archived 2024123P6731");
-        
-        assertEquals("archived", result.getEntities().get("status"));
-    }
-
-    @Test
-    void classify_normalizeStatus_closed() {
-        PatternClassifier.ClassificationResult result = classifier.classify("update status to closed 2024123P6731");
-        
-        assertEquals("closed", result.getEntities().get("status"));
-    }
-
-    @Test
     void classify_newStatus_microtomy() {
         PatternClassifier.ClassificationResult result = classifier.classify("update status to microtomy 2024123P6731");
         
@@ -217,7 +205,7 @@ class PatternClassifierTest {
         PatternClassifier.ClassificationResult result = classifier.classify("update status to pathologist review 2024123P6731");
         
         assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
-        assertEquals("pathologist_review", result.getEntities().get("status"));
+        assertEquals("pathologist review", result.getEntities().get("status"));
     }
 
     @Test
@@ -225,7 +213,7 @@ class PatternClassifierTest {
         PatternClassifier.ClassificationResult result = classifier.classify("update status to pathologist_review 2024123P6731");
         
         assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
-        assertEquals("pathologist_review", result.getEntities().get("status"));
+        assertEquals("pathologist review", result.getEntities().get("status"));
     }
 
     @Test
