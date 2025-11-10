@@ -447,6 +447,28 @@ class PatternClassifierTest {
         assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
     }
 
+    @Test
+    void classify_removesPoliteWords_iWouldLike() {
+        PatternClassifier.ClassificationResult result = classifier.classify("I would like to cancel case 2025123P6732");
+        
+        assertEquals(TaskType.CANCEL_CASE, result.getTaskType());
+        assertEquals("2025123P6732", result.getEntities().get("case_id"));
+    }
+
+    @Test
+    void classify_removesPoliteWords_iWant() {
+        PatternClassifier.ClassificationResult result = classifier.classify("I want cancel case 2025123P6732");
+        
+        assertEquals(TaskType.CANCEL_CASE, result.getTaskType());
+    }
+
+    @Test
+    void classify_removesPoliteWords_iNeed() {
+        PatternClassifier.ClassificationResult result = classifier.classify("I need cancel case 2025123P6732");
+        
+        assertEquals(TaskType.CANCEL_CASE, result.getTaskType());
+    }
+
     // ========== Real World Scenarios ==========
 
     @Test

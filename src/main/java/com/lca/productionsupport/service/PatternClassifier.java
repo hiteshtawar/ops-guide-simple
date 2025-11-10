@@ -74,8 +74,8 @@ public class PatternClassifier {
     private String normalizeQuery(String query) {
         String normalized = query.toLowerCase();
         
-        // Remove common polite/filler words
-        normalized = normalized.replaceAll("\\b(please|kindly|can you|could you|would you|i want to|i need to)\\b", "");
+        // Remove common polite/filler words (longer patterns first to match correctly)
+        normalized = normalized.replaceAll("\\b(i would like|i want to|i need to|please|kindly|can you|could you|would you|i want|i need)\\b", "");
         
         // Remove extra articles
         normalized = normalized.replaceAll("\\b(a|an|the)\\b", " ");
