@@ -204,6 +204,38 @@ class PatternClassifierTest {
         assertEquals("closed", result.getEntities().get("status"));
     }
 
+    @Test
+    void classify_newStatus_microtomy() {
+        PatternClassifier.ClassificationResult result = classifier.classify("update status to microtomy 2024123P6731");
+        
+        assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
+        assertEquals("microtomy", result.getEntities().get("status"));
+    }
+
+    @Test
+    void classify_newStatus_pathologistReview() {
+        PatternClassifier.ClassificationResult result = classifier.classify("update status to pathologist review 2024123P6731");
+        
+        assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
+        assertEquals("pathologist_review", result.getEntities().get("status"));
+    }
+
+    @Test
+    void classify_newStatus_pathologistReviewUnderscore() {
+        PatternClassifier.ClassificationResult result = classifier.classify("update status to pathologist_review 2024123P6731");
+        
+        assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
+        assertEquals("pathologist_review", result.getEntities().get("status"));
+    }
+
+    @Test
+    void classify_newStatus_rostering() {
+        PatternClassifier.ClassificationResult result = classifier.classify("update status to rostering 2024123P6731");
+        
+        assertEquals(TaskType.UPDATE_CASE_STATUS, result.getTaskType());
+        assertEquals("rostering", result.getEntities().get("status"));
+    }
+
     // ========== Case ID Extraction Tests ==========
 
     @Test

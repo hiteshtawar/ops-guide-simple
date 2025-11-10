@@ -25,7 +25,7 @@ public class PatternClassifier {
     
     // Status pattern - more flexible, handles common typos
     private static final Pattern STATUS_PATTERN = Pattern.compile(
-        "(?i)\\b(pending|accessioning?|grossing|embedding|cutting|staining|microscopy|under[_\\s]?review|on[_\\s]?hold|completed?|cancell?ed|archived?|closed?)\\b"
+        "(?i)\\b(pending|accessioning?|grossing|embedding|cutting|staining|microscopy|microtomy|pathologist[_\\s]?review|rostering|under[_\\s]?review|on[_\\s]?hold|completed?|cancell?ed|archived?|closed?)\\b"
     );
     
     /**
@@ -94,11 +94,14 @@ public class PatternClassifier {
             .replaceAll("_", " ")
             .replaceAll("\\s+", "_");
         
-        // Fix common typos
+        // Fix common typos and variations
         if (normalized.startsWith("accession")) {
             return "accessioning";
         }
-        if (normalized.contains("review")) {
+        if (normalized.contains("pathologist") && normalized.contains("review")) {
+            return "pathologist_review";
+        }
+        if (normalized.contains("review") && !normalized.contains("pathologist")) {
             return "under_review";
         }
         if (normalized.contains("hold")) {
@@ -159,8 +162,8 @@ public class PatternClassifier {
      */
     private boolean containsStatus(String query) {
         String[] statuses = {"pending", "accession", "grossing", "embedding", "cutting", 
-                           "staining", "microscopy", "review", "hold", "completed", 
-                           "cancelled", "cancel", "archived", "closed"};
+                           "staining", "microscopy", "microtomy", "pathologist", "rostering",
+                           "review", "hold", "completed", "cancelled", "cancel", "archived", "closed"};
         return containsAny(query, statuses);
     }
     
