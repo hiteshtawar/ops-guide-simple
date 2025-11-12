@@ -144,9 +144,16 @@ public class ProductionSupportController {
             required = true,
             content = @Content(schema = @Schema(implementation = StepExecutionRequest.class))
         )
-        @Valid @RequestBody StepExecutionRequest request
+        @Valid @RequestBody StepExecutionRequest request,
+        @Parameter(description = "User role from API Gateway header")
+        @RequestHeader(value = "Role-Name", required = false) String roleName
     ) {
-        log.info("Executing step {} for task {}", request.getStepNumber(), request.getTaskId());
+        log.info("Executing step {} for task {} with role: {}", request.getStepNumber(), request.getTaskId(), roleName);
+        
+        // Set the user role from header if not already set in request body
+        if (roleName != null && !roleName.isEmpty()) {
+            request.setUserRole(roleName);
+        }
         
         StepExecutionResponse response = stepExecutionService.executeStep(request);
         

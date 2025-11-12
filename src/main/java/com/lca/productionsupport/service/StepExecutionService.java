@@ -32,6 +32,28 @@ public class StepExecutionService {
     public StepExecutionResponse executeStep(StepExecutionRequest request) {
         long startTime = System.currentTimeMillis();
         
+        // Get the step definition from runbook
+        RunbookStep step = runbookParser.getStep(request.getTaskId(), request.getStepNumber());
+        
+        if (step == null) {
+            return StepExecutionResponse.builder()
+                .success(false)
+                .stepNumber(request.getStepNumber())
+                .errorMessage("Step not found")
+                .durationMs(System.currentTimeMillis() - startTime)
+                .build();
+        }
+        
+        // Check if this is a local message step
+        if ("LOCAL_MESSAGE".equals(step.getMethod())) {
+            return executeLocalMessage(request, step, startTime);
+        }
+        
+        // Check if this is a header validation step
+        if ("HEADER_CHECK".equals(step.getMethod())) {
+            return executeHeaderCheck(request, step, startTime);
+        }
+        
         // Get the WebClient for the downstream service
         WebClient webClient;
         try {
@@ -41,18 +63,6 @@ public class StepExecutionService {
                 .success(false)
                 .stepNumber(request.getStepNumber())
                 .errorMessage("Downstream service not configured: " + request.getDownstreamService())
-                .durationMs(System.currentTimeMillis() - startTime)
-                .build();
-        }
-        
-        // Get the step definition from runbook
-        RunbookStep step = runbookParser.getStep(request.getTaskId(), request.getStepNumber());
-        
-        if (step == null) {
-            return StepExecutionResponse.builder()
-                .success(false)
-                .stepNumber(request.getStepNumber())
-                .errorMessage("Step not found")
                 .durationMs(System.currentTimeMillis() - startTime)
                 .build();
         }
@@ -101,6 +111,63 @@ public class StepExecutionService {
                 .stepDescription(step.getDescription())
                 .errorMessage(e.getMessage())
                 .durationMs(System.currentTimeMillis() - startTime)
+                .build();
+        }
+    }
+    
+    /**
+     * Execute a local message step - returns a predefined message without any external calls
+     */
+    private StepExecutionResponse executeLocalMessage(StepExecutionRequest request, RunbookStep step, long startTime) {
+        String message = step.getRequestBody();  // Message stored in requestBody field
+        
+        log.info("Executing local message step: {}", message);
+        
+        long duration = System.currentTimeMillis() - startTime;
+        
+        return StepExecutionResponse.builder()
+            .success(true)
+            .stepNumber(request.getStepNumber())
+            .stepDescription(step.getDescription())
+            .statusCode(200)
+            .responseBody("{\"message\": \"" + message + "\"}")
+            .durationMs(duration)
+            .build();
+    }
+    
+    /**
+     * Execute a header validation check without making downstream API call
+     */
+    private StepExecutionResponse executeHeaderCheck(StepExecutionRequest request, RunbookStep step, long startTime) {
+        String headerName = step.getPath();  // Header name stored in path field
+        String expectedValue = step.getRequestBody();  // Expected value stored in requestBody field
+        String actualValue = request.getUserRole();  // Get the actual role from request
+        
+        log.info("Executing header check: header={}, expected={}, actual={}", 
+                headerName, expectedValue, actualValue);
+        
+        // Check if the actual value matches the expected value
+        boolean isValid = actualValue != null && actualValue.equals(expectedValue);
+        
+        long duration = System.currentTimeMillis() - startTime;
+        
+        if (isValid) {
+            return StepExecutionResponse.builder()
+                .success(true)
+                .stepNumber(request.getStepNumber())
+                .stepDescription(step.getDescription())
+                .statusCode(200)
+                .responseBody("{\"valid\": true, \"message\": \"User has required role: " + expectedValue + "\"}")
+                .durationMs(duration)
+                .build();
+        } else {
+            return StepExecutionResponse.builder()
+                .success(false)
+                .stepNumber(request.getStepNumber())
+                .stepDescription(step.getDescription())
+                .statusCode(403)
+                .errorMessage("Access denied: User role '" + actualValue + "' does not match required role '" + expectedValue + "'")
+                .durationMs(duration)
                 .build();
         }
     }

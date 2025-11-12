@@ -50,5 +50,10 @@ public class StepExecutionRequest {
      * Authorization token for downstream API calls
      */
     private String authToken;
+    
+    /**
+     * User role extracted from API Gateway headers (e.g., "Production Support")
+     */
+    private String userRole;
 }
 

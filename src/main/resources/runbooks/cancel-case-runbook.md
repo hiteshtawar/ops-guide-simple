@@ -13,18 +13,20 @@ Complete cancellation of a case including cleanup of associated workflows, notif
 
 1. **Verify User Has Cancel Permission**
    ```bash
-   GET /api/v1/users/{user_id}/permissions/cancel_case
+   HEADER_CHECK Role-Name
+   Expected: Production Support
    ```
+   
+   **Note:** This step validates the user's role from the request header sent by API Gateway. No downstream call is made. If permissions need to be checked from downstream service, use `GET /api/v1/users/{user_id}/permissions/cancel_case` instead.
 
 2. **Preview Cancellation Impact**
    ```bash
-   GET /api/v2/cases/{case_id}/cancel/preview
-   Headers:
-     Authorization: Bearer {token}
-     X-User-ID: {user_id}
+   LOCAL_MESSAGE
+   Case and it's materials will be canceled and removed from the workpool
    ```
 
-**Note:** The preview API validates that:
+**Note:**  If preview impacte need to be checked from downstream service
+then the preview API can validate that:
 - Case exists
 - Case is not already cancelled
 - Case has no blocking dependencies

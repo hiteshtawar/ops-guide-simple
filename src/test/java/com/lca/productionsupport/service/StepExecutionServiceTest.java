@@ -45,10 +45,11 @@ class StepExecutionServiceTest {
 
     @Test
     void executeStep_unconfiguredService_returnsError() {
+        // Note: Step 1 is HEADER_CHECK, step 2 is LOCAL_MESSAGE, so using step 3 which requires downstream service
         StepExecutionRequest request = StepExecutionRequest.builder()
             .taskId("CANCEL_CASE")
             .downstreamService("unknown-service")
-            .stepNumber(1)
+            .stepNumber(3)
             .entities(Map.of("case_id", "2025123P6732"))
             .userId("user123")
             .authToken("test-token")
@@ -57,7 +58,7 @@ class StepExecutionServiceTest {
         StepExecutionResponse response = stepExecutionService.executeStep(request);
 
         assertFalse(response.getSuccess());
-        assertEquals(1, response.getStepNumber());
+        assertEquals(3, response.getStepNumber());
         assertNotNull(response.getErrorMessage());
         assertTrue(response.getErrorMessage().contains("Downstream service not configured"));
         assertTrue(response.getErrorMessage().contains("unknown-service"));
@@ -306,5 +307,114 @@ class StepExecutionServiceTest {
 
         assertNotNull(response);
         assertEquals(1, response.getStepNumber());
+    }
+
+    // ========== Header Check Tests ==========
+
+    @Test
+    void executeStep_headerCheck_withValidRole_returnsSuccess() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole("Production Support")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertTrue(response.getSuccess());
+        assertEquals(1, response.getStepNumber());
+        assertEquals(200, response.getStatusCode());
+        assertNotNull(response.getResponseBody());
+        assertTrue(response.getResponseBody().contains("valid"));
+        assertTrue(response.getDurationMs() >= 0);
+    }
+
+    @Test
+    void executeStep_headerCheck_withInvalidRole_returnsForbidden() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole("Regular User")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertFalse(response.getSuccess());
+        assertEquals(1, response.getStepNumber());
+        assertEquals(403, response.getStatusCode());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("Access denied"));
+        assertTrue(response.getDurationMs() >= 0);
+    }
+
+    @Test
+    void executeStep_headerCheck_withNullRole_returnsForbidden() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole(null)
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertFalse(response.getSuccess());
+        assertEquals(1, response.getStepNumber());
+        assertEquals(403, response.getStatusCode());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("Access denied"));
+    }
+
+    @Test
+    void executeStep_headerCheck_withEmptyRole_returnsForbidden() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole("")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertFalse(response.getSuccess());
+        assertEquals(1, response.getStepNumber());
+        assertEquals(403, response.getStatusCode());
+    }
+
+    // ========== Local Message Tests ==========
+
+    @Test
+    void executeStep_localMessage_returnsMessageSuccessfully() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertTrue(response.getSuccess());
+        assertEquals(2, response.getStepNumber());
+        assertEquals(200, response.getStatusCode());
+        assertNotNull(response.getResponseBody());
+        assertTrue(response.getResponseBody().contains("Case and it's materials will be canceled and removed from the workpool"));
+        assertTrue(response.getDurationMs() >= 0);
     }
 }

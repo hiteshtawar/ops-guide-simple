@@ -27,6 +27,9 @@ public class RunbookParser {
     
     // Patterns for parsing markdown
     private static final Pattern API_CALL_PATTERN = Pattern.compile("(GET|POST|PATCH|PUT|DELETE)\\s+(/[^\\s]+)");
+    private static final Pattern HEADER_CHECK_PATTERN = Pattern.compile("HEADER_CHECK\\s+([^\\n]+)");
+    private static final Pattern LOCAL_MESSAGE_PATTERN = Pattern.compile("LOCAL_MESSAGE");
+    private static final Pattern EXPECTED_VALUE_PATTERN = Pattern.compile("Expected:\\s*(.+)");
     private static final Pattern SECTION_PATTERN = Pattern.compile("^##\\s+(.+)$");
     
     public RunbookParser() {
@@ -153,6 +156,48 @@ public class RunbookParser {
      * Parse a code block into a structured step
      */
     private RunbookStep parseCodeBlockToStep(String code, String description, String stepType, int stepNumber) {
+        // Check if this is a local message step
+        Matcher localMessageMatcher = LOCAL_MESSAGE_PATTERN.matcher(code);
+        if (localMessageMatcher.find()) {
+            // Extract the message (everything after LOCAL_MESSAGE line)
+            String message = code.substring(localMessageMatcher.end()).trim();
+            
+            return RunbookStep.builder()
+                .stepNumber(stepNumber)
+                .description(description.isEmpty() ? "Local message" : description)
+                .method("LOCAL_MESSAGE")
+                .path(null)  // No path needed
+                .requestBody(message)  // Store message in requestBody field
+                .autoExecutable(true)  // Local messages are safe to auto-execute
+                .stepType(stepType)
+                .build();
+        }
+        
+        // Check if this is a header check step
+        Matcher headerCheckMatcher = HEADER_CHECK_PATTERN.matcher(code);
+        if (headerCheckMatcher.find()) {
+            String headerName = headerCheckMatcher.group(1).trim();
+            
+            // Extract expected value
+            String expectedValue = null;
+            Matcher expectedMatcher = EXPECTED_VALUE_PATTERN.matcher(code);
+            if (expectedMatcher.find()) {
+                expectedValue = expectedMatcher.group(1).trim();
+            }
+            
+            // For header checks, we use a special method "HEADER_CHECK" and store header name in path
+            // Expected value is stored in requestBody
+            return RunbookStep.builder()
+                .stepNumber(stepNumber)
+                .description(description.isEmpty() ? "Header validation" : description)
+                .method("HEADER_CHECK")
+                .path(headerName)  // Store header name in path field
+                .requestBody(expectedValue)  // Store expected value in requestBody field
+                .autoExecutable(true)  // Header checks are safe to auto-execute
+                .stepType(stepType)
+                .build();
+        }
+        
         // Extract HTTP method and path
         Matcher apiMatcher = API_CALL_PATTERN.matcher(code);
         

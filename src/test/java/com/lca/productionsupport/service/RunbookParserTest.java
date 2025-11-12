@@ -26,7 +26,7 @@ class RunbookParserTest {
 
         assertNotNull(steps);
         assertTrue(steps.size() > 0);
-        assertEquals(5, steps.size()); // CANCEL_CASE has 5 steps based on runbook
+        assertEquals(5, steps.size()); // CANCEL_CASE has 5 steps: HEADER_CHECK, LOCAL_MESSAGE, POST, GET, GET
     }
 
     @Test
