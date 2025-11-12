@@ -74,9 +74,9 @@ public class OperationalResponse {
         private String description;
         
         /**
-         * HTTP method (GET, POST, PATCH, etc.)
+         * Step execution method (LOCAL_MESSAGE, HEADER_CHECK, GET, POST, PATCH, etc.)
          */
-        private String method;
+        private StepMethod method;
         
         /**
          * API endpoint path

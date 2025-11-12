@@ -1,6 +1,7 @@
 package com.lca.productionsupport.service;
 
 import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
+import com.lca.productionsupport.model.StepMethod;
 import com.lca.productionsupport.model.TaskType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -165,7 +166,7 @@ public class RunbookParser {
             return RunbookStep.builder()
                 .stepNumber(stepNumber)
                 .description(description.isEmpty() ? "Local message" : description)
-                .method("LOCAL_MESSAGE")
+                .method(StepMethod.LOCAL_MESSAGE)
                 .path(null)  // No path needed
                 .requestBody(message)  // Store message in requestBody field
                 .autoExecutable(true)  // Local messages are safe to auto-execute
@@ -190,7 +191,7 @@ public class RunbookParser {
             return RunbookStep.builder()
                 .stepNumber(stepNumber)
                 .description(description.isEmpty() ? "Header validation" : description)
-                .method("HEADER_CHECK")
+                .method(StepMethod.HEADER_CHECK)
                 .path(headerName)  // Store header name in path field
                 .requestBody(expectedValue)  // Store expected value in requestBody field
                 .autoExecutable(true)  // Header checks are safe to auto-execute
@@ -206,8 +207,15 @@ public class RunbookParser {
             return null;
         }
         
-        String method = apiMatcher.group(1);
+        String methodStr = apiMatcher.group(1);
         String path = apiMatcher.group(2);
+        
+        // Convert string to StepMethod enum
+        StepMethod method = StepMethod.fromString(methodStr);
+        if (method == null) {
+            log.warn("Unknown HTTP method: {}", methodStr);
+            return null;
+        }
         
         // Extract request body (look for JSON between { and })
         String requestBody = null;
@@ -220,7 +228,7 @@ public class RunbookParser {
         }
         
         // Determine if auto-executable (GET requests are generally safe)
-        boolean autoExecutable = "GET".equals(method);
+        boolean autoExecutable = method == StepMethod.GET;
         
         return RunbookStep.builder()
             .stepNumber(stepNumber)

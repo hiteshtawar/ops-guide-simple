@@ -4,6 +4,7 @@ import com.lca.productionsupport.config.WebClientRegistry;
 import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
 import com.lca.productionsupport.model.StepExecutionRequest;
 import com.lca.productionsupport.model.StepExecutionResponse;
+import com.lca.productionsupport.model.StepMethod;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -44,14 +45,15 @@ public class StepExecutionService {
                 .build();
         }
         
-        // Check if this is a local message step
-        if ("LOCAL_MESSAGE".equals(step.getMethod())) {
-            return executeLocalMessage(request, step, startTime);
-        }
+        StepMethod method = step.getMethod();
         
-        // Check if this is a header validation step
-        if ("HEADER_CHECK".equals(step.getMethod())) {
-            return executeHeaderCheck(request, step, startTime);
+        // Check if this is a local execution step (no downstream service needed)
+        if (method != null && method.isLocalExecution()) {
+            if (method == StepMethod.LOCAL_MESSAGE) {
+                return executeLocalMessage(request, step, startTime);
+            } else if (method == StepMethod.HEADER_CHECK) {
+                return executeHeaderCheck(request, step, startTime);
+            }
         }
         
         // Get the WebClient for the downstream service
@@ -83,7 +85,7 @@ public class StepExecutionService {
             // Build and execute the request
             String responseBody = executeHttpRequest(
                 webClient,
-                step.getMethod(),
+                method,
                 resolvedPath,
                 resolvedBody,
                 request.getAuthToken(),
@@ -175,38 +177,38 @@ public class StepExecutionService {
     /**
      * Execute HTTP request based on method
      */
-    private String executeHttpRequest(WebClient webClient, String method, String path, 
+    private String executeHttpRequest(WebClient webClient, StepMethod method, String path, 
                                      String body, String authToken, String userId, Duration timeout) {
         
         WebClient.RequestHeadersSpec<?> request;
         
-        switch (method.toUpperCase()) {
-            case "GET":
+        switch (method) {
+            case GET:
                 request = webClient.get().uri(path);
                 break;
                 
-            case "POST":
+            case POST:
                 request = webClient.post()
                     .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(body != null ? body : "{}");
                 break;
                 
-            case "PATCH":
+            case PATCH:
                 request = webClient.patch()
                     .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(body != null ? body : "{}");
                 break;
                 
-            case "PUT":
+            case PUT:
                 request = webClient.put()
                     .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(body != null ? body : "{}");
                 break;
                 
-            case "DELETE":
+            case DELETE:
                 request = webClient.delete().uri(path);
                 break;
                 
