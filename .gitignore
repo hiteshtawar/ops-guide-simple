@@ -35,4 +35,5 @@ mvnw.cmd
 Thumbs.db
 
 # Application
+src/main/java/com/lca/productionsupport/config/CorsConfig.java
 
