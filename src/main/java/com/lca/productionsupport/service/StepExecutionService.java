@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -90,6 +91,7 @@ public class StepExecutionService {
                 resolvedBody,
                 request.getAuthToken(),
                 request.getUserId(),
+                request.getCustomHeaders(),
                 timeout
             );
             
@@ -178,7 +180,8 @@ public class StepExecutionService {
      * Execute HTTP request based on method
      */
     private String executeHttpRequest(WebClient webClient, StepMethod method, String path, 
-                                     String body, String authToken, String userId, Duration timeout) {
+                                     String body, String authToken, String userId, 
+                                     Map<String, String> customHeaders, Duration timeout) {
         
         WebClient.RequestHeadersSpec<?> request;
         
@@ -216,11 +219,18 @@ public class StepExecutionService {
                 throw new IllegalArgumentException("Unsupported HTTP method: " + method);
         }
         
-        // Add headers
+        // Add standard headers
         request = request
             .header("Authorization", "Bearer " + (authToken != null ? authToken : "dummy-token"))
             .header("X-User-ID", userId != null ? userId : "system")
             .header("X-Idempotency-Key", UUID.randomUUID().toString());
+        
+        // Add custom headers from API Gateway (Api-User, Lab-Id, Discipline-Name, Time-Zone, Role-Name, accept, etc.)
+        if (customHeaders != null) {
+            for (Map.Entry<String, String> header : customHeaders.entrySet()) {
+                request = request.header(header.getKey(), header.getValue());
+            }
+        }
         
         // Execute and get response
         return request.retrieve()

@@ -36,8 +36,14 @@ then the preview API can validate that:
 
 1. **Execute Case Cancellation**
    ```bash
-   POST /api/v2/cases/{case_id}/cancel
+   PATCH /lims-api/case/{caseNumber}/cancel
    Headers:
+     Api-User: {api_user}
+     Lab-Id: {lab_id}
+     Discipline-Name: {discipline_name}
+     Time-Zone: {time_zone}
+     Role-Name: {role_name}
+     accept: application/json
      Authorization: Bearer {token}
      X-User-ID: {user_id}
      X-Idempotency-Key: {IDEMPOTENCY_KEY}
@@ -46,23 +52,47 @@ then the preview API can validate that:
    Body:
    {
      "reason": "operational_request",
-     "notes": "Cancelled via OpsGuide",
+     "notes": "Cancelled via Production Support",
      "notify_stakeholders": true
    }
    ```
+   
+   **Note:** Custom headers (Api-User, Lab-Id, Discipline-Name, Time-Zone, Role-Name) are automatically forwarded from the execute-step API request headers to the downstream service.
 
 
 ## Post-checks
 
 1. **Verify Case Status Updated to Cancelled**
    ```bash
-   GET /api/v2/cases/{case_id}/status
+   GET /lims-api/case/{caseNumber}/status
+   Headers:
+     Api-User: {api_user}
+     Lab-Id: {lab_id}
+     Discipline-Name: {discipline_name}
+     Time-Zone: {time_zone}
+     Role-Name: {role_name}
+     accept: application/json
+     Authorization: Bearer {token}
+     X-User-ID: {user_id}
    ```
+   
+   **Note:** Custom headers are automatically forwarded from the execute-step API request headers to the downstream service.
 
 2. **Verify Audit Log Entry Created**
    ```bash
-   GET /api/v2/cases/{case_id}/audit-log
+   GET /lims-api/case/{caseNumber}/audit-log
+   Headers:
+     Api-User: {api_user}
+     Lab-Id: {lab_id}
+     Discipline-Name: {discipline_name}
+     Time-Zone: {time_zone}
+     Role-Name: {role_name}
+     accept: application/json
+     Authorization: Bearer {token}
+     X-User-ID: {user_id}
    ```
+   
+   **Note:** Custom headers are automatically forwarded from the execute-step API request headers to the downstream service.
 
 ## Error Handling
 

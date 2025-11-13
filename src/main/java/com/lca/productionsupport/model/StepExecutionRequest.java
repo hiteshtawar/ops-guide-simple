@@ -55,5 +55,11 @@ public class StepExecutionRequest {
      * User role extracted from API Gateway headers (e.g., "Production Support")
      */
     private String userRole;
+    
+    /**
+     * Custom headers from API Gateway to forward to downstream service
+     * (e.g., Api-User, Lab-Id, Discipline-Name, Time-Zone, etc.)
+     */
+    private Map<String, String> customHeaders;
 }
 

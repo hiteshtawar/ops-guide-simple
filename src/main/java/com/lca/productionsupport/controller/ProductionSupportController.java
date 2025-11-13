@@ -22,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -146,7 +147,16 @@ public class ProductionSupportController {
         )
         @Valid @RequestBody StepExecutionRequest request,
         @Parameter(description = "User role from API Gateway header")
-        @RequestHeader(value = "Role-Name", required = false) String roleName
+        @RequestHeader(value = "Role-Name", required = false) String roleName,
+        @Parameter(description = "API User from API Gateway header")
+        @RequestHeader(value = "Api-User", required = false) String apiUser,
+        @Parameter(description = "Lab ID from API Gateway header")
+        @RequestHeader(value = "Lab-Id", required = false) String labId,
+        @Parameter(description = "Discipline Name from API Gateway header")
+        @RequestHeader(value = "Discipline-Name", required = false) String disciplineName,
+        @Parameter(description = "Time Zone from API Gateway header")
+        @RequestHeader(value = "Time-Zone", required = false) String timeZone,
+        @RequestHeader(value = "accept", required = false) String accept
     ) {
         log.info("Executing step {} for task {} with role: {}", request.getStepNumber(), request.getTaskId(), roleName);
         
@@ -154,6 +164,29 @@ public class ProductionSupportController {
         if (roleName != null && !roleName.isEmpty()) {
             request.setUserRole(roleName);
         }
+        
+        // Collect custom headers from API Gateway to forward to downstream service
+        Map<String, String> customHeaders = new HashMap<>();
+        if (apiUser != null && !apiUser.isEmpty()) {
+            customHeaders.put("Api-User", apiUser);
+        }
+        if (labId != null && !labId.isEmpty()) {
+            customHeaders.put("Lab-Id", labId);
+        }
+        if (disciplineName != null && !disciplineName.isEmpty()) {
+            customHeaders.put("Discipline-Name", disciplineName);
+        }
+        if (timeZone != null && !timeZone.isEmpty()) {
+            customHeaders.put("Time-Zone", timeZone);
+        }
+        if (roleName != null && !roleName.isEmpty()) {
+            customHeaders.put("Role-Name", roleName);
+        }
+        if (accept != null && !accept.isEmpty()) {
+            customHeaders.put("accept", accept);
+        }
+        
+        request.setCustomHeaders(customHeaders);
         
         StepExecutionResponse response = stepExecutionService.executeStep(request);
         
