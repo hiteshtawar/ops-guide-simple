@@ -113,7 +113,7 @@ public class RunbookAdapter {
         // Handle HEADER_CHECK step type
         if ("HEADER_CHECK".equalsIgnoreCase(step.getMethod())) {
             String headerName = step.getPath(); // Path contains the header name
-            String expectedValue = step.getExpectedResponse();
+            String expectedValue = replacePlaceholders(step.getExpectedResponse(), entities);
             
             return RunbookStep.builder()
                     .stepNumber(step.getStepNumber())
