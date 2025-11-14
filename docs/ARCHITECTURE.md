@@ -28,6 +28,10 @@ Production Support Admin Tool is a **YAML-driven operational automation platform
 - **Default (JAR-bundled)**: YAML files in `src/main/resources/runbooks/` are bundled in the JAR, so you need to rebuild and redeploy the JAR to include new runbooks. This is the simplest setup.
 - **External Path (Zero-Deployment)**: Configure `runbook.location=file:/path/to/runbooks/` in `application.yml` to load YAML files from the file system. With this setup, you can add new YAML files without redeploying—just restart the service or enable hot-reload.
 
+**External Path Options:**
+1. **Container Volume Mount** (Recommended): Mount a volume in your container (e.g., ECS task definition, Kubernetes ConfigMap/Secret, or Docker volume) pointing to `/opt/runbooks/`. Configure `runbook.location=file:/opt/runbooks/` and update runbooks by updating the mounted volume—no container restart needed if hot-reload is enabled.
+2. **S3-based Storage** (Future Enhancement): Store runbooks in S3 and sync them to a local path on container startup, or implement an S3 watcher to automatically reload when files change. This enables centralized runbook management across multiple service instances.
+
 **Prerequisite:** The only requirement is that downstream services must have **PATCH, POST, or DELETE APIs** ready for the steps to be executed. The runbook system will automatically call these APIs based on the YAML configuration.
 
 **Business Impact:**
@@ -401,17 +405,79 @@ useCase:
 - **Cons:** Requires deployment for new runbooks
 
 **Option 2: External File Path (Zero-Deployment)**
+
+**2a. Container Volume Mount (Recommended)**
 ```yaml
 # application.yml
 runbook:
-  location: file:/opt/runbooks/  # External path
+  location: file:/opt/runbooks/  # Mounted volume path
   hot-reload:
     enabled: true  # Optional: auto-reload on file changes
 ```
-- YAML files stored outside JAR
-- **Requires:** Just restart service (or enable hot-reload)
-- **Pros:** Add runbooks without redeploying JAR
-- **Cons:** Need to manage external file location
+
+**ECS Task Definition Example:**
+```json
+{
+  "containerDefinitions": [{
+    "mountPoints": [{
+      "sourceVolume": "runbooks",
+      "containerPath": "/opt/runbooks",
+      "readOnly": false
+    }]
+  }],
+  "volumes": [{
+    "name": "runbooks",
+    "efsVolumeConfiguration": {
+      "fileSystemId": "fs-xxxxx",
+      "rootDirectory": "/runbooks"
+    }
+  }]
+}
+```
+
+**Kubernetes Example:**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: runbooks
+data:
+  cancel-case.yaml: |
+    useCase:
+      id: "CANCEL_CASE"
+    # ... rest of runbook
+---
+spec:
+  containers:
+  - name: production-support
+    volumeMounts:
+    - name: runbooks
+      mountPath: /opt/runbooks
+  volumes:
+  - name: runbooks
+    configMap:
+      name: runbooks
+```
+
+- YAML files stored in mounted volume (EFS, ConfigMap, etc.)
+- **Requires:** Update volume contents, restart service (or enable hot-reload)
+- **Pros:** Add runbooks without redeploying JAR, centralized storage
+- **Cons:** Need to manage volume mount configuration
+
+**2b. S3-based Storage (Future Enhancement)**
+```yaml
+# application.yml
+runbook:
+  location: s3://my-bucket/runbooks/  # S3 path (requires implementation)
+  s3:
+    region: us-east-1
+    sync-interval: 60  # Sync every 60 seconds
+```
+
+- YAML files stored in S3 bucket
+- **Requires:** S3 sync implementation or S3 watcher
+- **Pros:** Centralized management, version control via S3 versioning, cross-region replication
+- **Cons:** Requires custom implementation, S3 API calls
 
 **Result:**
 - ✅ Immediately available via `/api/v1/process`
