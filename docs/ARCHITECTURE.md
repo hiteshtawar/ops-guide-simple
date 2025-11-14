@@ -1,15 +1,15 @@
-# OpsGuide Simple - Architecture
+# Production Support Admin Tool - Architecture
 
 ## Overview
 
-OpsGuide Simple is a **YAML-driven operational automation platform** that enables **zero-code deployment** of new use cases with **infinite horizontal scaling**. Similar to how AWS CloudFormation templates or GitHub Actions workflows work, you simply drop a YAML file to add new operational capabilities—no code changes, no deployments, no engineering bottlenecks.
+Production Support Admin Tool is a **YAML-driven operational automation platform** that enables **zero-code deployment** of new use cases with **infinite horizontal scaling**. Similar to how AWS CloudFormation templates or GitHub Actions workflows work, you simply drop a YAML file to add new operational capabilities—no code changes, no deployments, no engineering bottlenecks.
 
 ### The Promise: Configuration-Driven Operations
 
 **Just like CloudFormation and GitHub Actions:**
 - **CloudFormation**: Define infrastructure in YAML → AWS provisions it automatically
 - **GitHub Actions**: Define workflows in YAML → GitHub executes them automatically  
-- **OpsGuide**: Define operational runbooks in YAML → System executes them automatically
+- **Production Support Admin Tool**: Define operational runbooks in YAML → System executes them automatically
 
 **One-time engineering investment, infinite business value scaling.**
 
@@ -46,7 +46,7 @@ The architecture is designed for **unlimited use case expansion**:
 - **Self-contained runbooks**: Each YAML file is complete and independent
 
 **Real-World Analogy:**
-Just as you can add unlimited CloudFormation stacks or GitHub Actions workflows without modifying the underlying platform, you can add unlimited operational runbooks without modifying OpsGuide.
+Just as you can add unlimited CloudFormation stacks or GitHub Actions workflows without modifying the underlying platform, you can add unlimited operational runbooks without modifying Production Support Admin Tool.
 
 ## Design Principles
 
@@ -69,7 +69,7 @@ Just as you can add unlimited CloudFormation stacks or GitHub Actions workflows 
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
 │                    REST API Layer                            │
-│                  OpsGuideController                          │
+│              ProductionSupportController                    │
 │  ┌──────────────┬─────────────┬───────────────────────┐    │
 │  │ /process     │ /classify   │ /execute-step         │    │
 │  │ /health      │ /tasks/{id} │                       │    │
@@ -78,7 +78,7 @@ Just as you can add unlimited CloudFormation stacks or GitHub Actions workflows 
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
 │                   Orchestration Layer                        │
-│                 OpsGuideOrchestrator                         │
+│            ProductionSupportOrchestrator                     │
 │  - Coordinates classification and runbook retrieval          │
 │  - Manages request/response flow                            │
 │  - Builds warnings and validation                           │
@@ -116,7 +116,7 @@ Just as you can add unlimited CloudFormation stacks or GitHub Actions workflows 
 
 ## Component Details
 
-### 1. REST API Layer (`OpsGuideController`)
+### 1. REST API Layer (`ProductionSupportController`)
 
 **Responsibilities:**
 - Expose HTTP endpoints
@@ -131,7 +131,7 @@ Just as you can add unlimited CloudFormation stacks or GitHub Actions workflows 
 - `POST /api/v1/execute-step` - Execute a step
 - `GET /api/v1/health` - Health check
 
-### 2. Orchestration Layer (`OpsGuideOrchestrator`)
+### 2. Orchestration Layer (`ProductionSupportOrchestrator`)
 
 **Responsibilities:**
 - Coordinate between classifier and runbook parser
@@ -239,7 +239,7 @@ Steps: [
 ]
      │
      ▼
-[OpsGuideOrchestrator]
+[ProductionSupportOrchestrator]
      │ Combine: classification + steps
      │ Build: warnings
      ▼
@@ -360,7 +360,7 @@ server:
 ### Current:
 - Token passthrough to downstream APIs
 - Basic input validation
-- No authentication on OpsGuide endpoints
+- No authentication on Production Support Admin Tool endpoints
 
 ### Production Ready:
 - Add Spring Security
@@ -447,7 +447,7 @@ runbook:
 | **AWS CloudFormation** | YAML templates | Infinite stacks | None |
 | **GitHub Actions** | YAML workflows | Infinite workflows | None |
 | **Kubernetes** | YAML manifests | Infinite resources | None |
-| **OpsGuide** | YAML runbooks | **Infinite use cases** | **None** |
+| **Production Support Admin Tool** | YAML runbooks | **Infinite use cases** | **None** |
 
 ### Adding New Patterns (Advanced)
 
@@ -521,7 +521,7 @@ Only needed for new platform capabilities, not new use cases:
 
 ## Conclusion: The Configuration-Driven Operations Model
 
-OpsGuide Simple represents a **paradigm shift** from code-driven to **configuration-driven operations**. Just as CloudFormation revolutionized infrastructure management and GitHub Actions transformed CI/CD, OpsGuide transforms operational automation.
+Production Support Admin Tool represents a **paradigm shift** from code-driven to **configuration-driven operations**. Just as CloudFormation revolutionized infrastructure management and GitHub Actions transformed CI/CD, Production Support Admin Tool transforms operational automation.
 
 ### Key Differentiators
 
@@ -549,5 +549,5 @@ OpsGuide Simple represents a **paradigm shift** from code-driven to **configurat
 - Enterprise-grade error handling
 - Full API documentation
 
-OpsGuide Simple achieves **80% of the value with 20% of the complexity**, while enabling **infinite horizontal scaling** through its configuration-driven model—making it the ideal platform for organizations seeking operational excellence without engineering bottlenecks.
+Production Support Admin Tool achieves **80% of the value with 20% of the complexity**, while enabling **infinite horizontal scaling** through its configuration-driven model—making it the ideal platform for organizations seeking operational excellence without engineering bottlenecks.
 

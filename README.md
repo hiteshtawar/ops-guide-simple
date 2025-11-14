@@ -114,7 +114,7 @@ curl -X POST http://localhost:8093/api/v1/process \
         ▼                 ▼
 ┌──────────────┐  ┌──────────────┐
 │  ECS Task 1  │  │  ECS Task 2  │
-│ OpsGuide API │  │ OpsGuide API │
+│ Production Support Admin Tool API │  │ Production Support Admin Tool API │
 └──────┬───────┘  └──────┬───────┘
        │                 │
        └────────┬────────┘
