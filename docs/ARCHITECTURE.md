@@ -11,7 +11,16 @@ Production Support Admin Tool is a **YAML-driven operational automation platform
 - **GitHub Actions**: Define workflows in YAML → GitHub executes them automatically  
 - **Production Support Admin Tool**: Define operational runbooks in YAML → System executes them automatically
 
-**One-time engineering investment, infinite business value scaling.**
+**Platform Comparison:**
+
+| Platform | Model | Scaling | Code Changes |
+|----------|-------|---------|--------------|
+| **AWS CloudFormation** | YAML templates | Infinite stacks | None |
+| **GitHub Actions** | YAML workflows | Infinite workflows | None |
+| **Kubernetes** | YAML manifests | Infinite resources | None |
+| **Production Support Admin Tool** | YAML runbooks | **Infinite use cases** | **None** |
+
+**One-time engineering effort, infinite operational automation scaling.**
 
 ## Core Value Proposition
 
@@ -506,14 +515,6 @@ runbook:
 - **Self-service capability**: Operations teams can define workflows
 - **Infinite scalability**: No limits on operational use cases
 
-**Platform Comparison:**
-
-| Platform | Model | Scaling | Code Changes |
-|----------|-------|---------|--------------|
-| **AWS CloudFormation** | YAML templates | Infinite stacks | None |
-| **GitHub Actions** | YAML workflows | Infinite workflows | None |
-| **Kubernetes** | YAML manifests | Infinite resources | None |
-| **Production Support Admin Tool** | YAML runbooks | **Infinite use cases** | **None** |
 
 ### Adding New Patterns (Advanced)
 
