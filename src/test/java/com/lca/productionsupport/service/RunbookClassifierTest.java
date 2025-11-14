@@ -57,15 +57,16 @@ class RunbookClassifierTest {
 
     @Test
     void classify_updateCaseStatus_matchesCorrectly() {
-        String result = classifier.classify("update status to pending");
-        assertEquals("UPDATE_CASE_STATUS", result);
+        String result = classifier.classify("update sample status to Completed - Microtomy");
+        assertEquals("UPDATE_SAMPLE_STATUS", result);
     }
 
     @Test
     void classify_updateCaseStatus_withVariations() {
-        assertEquals("UPDATE_CASE_STATUS", classifier.classify("change status"));
-        assertEquals("UPDATE_CASE_STATUS", classifier.classify("modify status"));
-        assertEquals("UPDATE_CASE_STATUS", classifier.classify("set status"));
+        assertEquals("UPDATE_SAMPLE_STATUS", classifier.classify("change sample status"));
+        assertEquals("UPDATE_SAMPLE_STATUS", classifier.classify("update slide status"));
+        assertEquals("UPDATE_SAMPLE_STATUS", classifier.classify("update container status"));
+        assertEquals("UPDATE_SAMPLE_STATUS", classifier.classify("update block status"));
     }
 
     @Test
@@ -149,7 +150,7 @@ class RunbookClassifierTest {
                 
                 UseCaseDefinition useCase2 = new UseCaseDefinition();
                 UseCaseDefinition.UseCaseInfo info2 = new UseCaseDefinition.UseCaseInfo();
-                info2.setId("UPDATE_CASE_STATUS");
+                info2.setId("UPDATE_SAMPLE_STATUS");
                 useCase2.setUseCase(info2);
                 
                 UseCaseDefinition.ClassificationConfig classification2 = new UseCaseDefinition.ClassificationConfig();

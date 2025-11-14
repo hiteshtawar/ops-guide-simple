@@ -53,10 +53,10 @@ class RunbookRegistryTest {
 
     @Test
     void loadRunbooks_loadsUpdateCaseStatus() {
-        assertTrue(registry.hasUseCase("UPDATE_CASE_STATUS"));
-        UseCaseDefinition updateStatus = registry.getUseCase("UPDATE_CASE_STATUS");
+        assertTrue(registry.hasUseCase("UPDATE_SAMPLE_STATUS"));
+        UseCaseDefinition updateStatus = registry.getUseCase("UPDATE_SAMPLE_STATUS");
         assertNotNull(updateStatus);
-        assertEquals("UPDATE_CASE_STATUS", updateStatus.getUseCase().getId());
+        assertEquals("UPDATE_SAMPLE_STATUS", updateStatus.getUseCase().getId());
     }
 
     @Test
@@ -74,7 +74,7 @@ class RunbookRegistryTest {
     void getAllUseCases_returnsAllLoadedUseCases() {
         Collection<UseCaseDefinition> allUseCases = registry.getAllUseCases();
         assertNotNull(allUseCases);
-        assertTrue(allUseCases.size() >= 2); // At least CANCEL_CASE and UPDATE_CASE_STATUS
+        assertTrue(allUseCases.size() >= 2); // At least CANCEL_CASE and UPDATE_SAMPLE_STATUS
     }
 
     @Test
