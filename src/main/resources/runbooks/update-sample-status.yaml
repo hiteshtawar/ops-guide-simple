@@ -18,7 +18,7 @@ classification:
     - "status to"
   synonyms:
     update: ["change", "modify", "set", "mark"]
-    status: ["state", "stage", "phase"]
+    status: ["state"]
     sample: ["slide", "container", "block", "specimen"]
   requiredEntities:
     - sampleId
@@ -41,11 +41,12 @@ extraction:
     sampleStatus:
       type: "string"
       patterns:
-        - "to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)\\s*(?:-\\s*[A-Za-z\\s]+)?)" # Handles "Ready for - Accessioning", "Completed - Microtomy", etc.
-        - "status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)\\s*(?:-\\s*[A-Za-z\\s]+)?)"
-        - "as\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)\\s*(?:-\\s*[A-Za-z\\s]+)?)"
-        - "mark\\s+status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)\\s*(?:-\\s*[A-Za-z\\s]+)?)"
-        - "set\\s+status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)\\s*(?:-\\s*[A-Za-z\\s]+)?)"
+        - "to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)" # Handles "Ready for - Accessioning", "Completed - Microtomy", etc.
+        - "status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)"
+        - "as\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)"
+        - "mark\\s+status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)"
+        - "set\\s+status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)"
+        - "(?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?(?:\\s+and\\s+update\\s+workpool)?" # Handles "Completed - Microtomy and update workpool"
       required: true
       validation:
         enumValues:
@@ -122,7 +123,7 @@ execution:
       description: "Display impact message to user"
       autoExecutable: true
       method: "LOCAL_MESSAGE"
-      localMessage: "Sample status will be updated to {sampleStatus}. This may affect workflow progression."
+      localMessage: "Sample status will be updated to {sampleStatus} and workpool updated. This may affect workflow progression."
       errorHandling:
         onFailure: "continue"
     
