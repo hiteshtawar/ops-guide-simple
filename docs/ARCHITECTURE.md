@@ -22,7 +22,11 @@ OpsGuide Simple is a **YAML-driven operational automation platform** that enable
 1. **Create a YAML file** → Drop it in `src/main/resources/runbooks/`
 2. **System auto-discovers** → Loads on startup automatically
 3. **Immediately available** → Ready for production use
-4. **No code changes** → No deployments → No engineering cycles
+4. **No code changes** → No engineering cycles
+
+**Deployment Note:** 
+- **Default (JAR-bundled)**: YAML files in `src/main/resources/runbooks/` are bundled in the JAR, so you need to rebuild and redeploy the JAR to include new runbooks. This is the simplest setup.
+- **External Path (Zero-Deployment)**: Configure `runbook.location=file:/path/to/runbooks/` in `application.yml` to load YAML files from the file system. With this setup, you can add new YAML files without redeploying—just restart the service or enable hot-reload.
 
 **Prerequisite:** The only requirement is that downstream services must have **PATCH, POST, or DELETE APIs** ready for the steps to be executed. The runbook system will automatically call these APIs based on the YAML configuration.
 
@@ -372,7 +376,7 @@ server:
 
 **The CloudFormation/GitHub Actions Model:**
 
-1. **Create YAML file** in `src/main/resources/runbooks/`
+1. **Create YAML file** in `src/main/resources/runbooks/` (or external path if configured)
 2. **That's it!** System automatically:
    - Discovers the file on startup
    - Loads and validates the runbook
@@ -388,12 +392,32 @@ useCase:
   # ... rest of configuration
 ```
 
+**Deployment Options:**
+
+**Option 1: JAR-bundled (Default)**
+- YAML files in `src/main/resources/runbooks/` are bundled in JAR
+- **Requires:** Rebuild JAR and redeploy
+- **Pros:** Simple, version-controlled with code
+- **Cons:** Requires deployment for new runbooks
+
+**Option 2: External File Path (Zero-Deployment)**
+```yaml
+# application.yml
+runbook:
+  location: file:/opt/runbooks/  # External path
+  hot-reload:
+    enabled: true  # Optional: auto-reload on file changes
+```
+- YAML files stored outside JAR
+- **Requires:** Just restart service (or enable hot-reload)
+- **Pros:** Add runbooks without redeploying JAR
+- **Cons:** Need to manage external file location
+
 **Result:**
 - ✅ Immediately available via `/api/v1/process`
 - ✅ Appears in `/api/v1/tasks` endpoint
 - ✅ Can be classified and executed
 - ✅ **No code changes**
-- ✅ **No deployment needed**
 - ✅ **No engineering ticket required**
 
 **Business Value:**
