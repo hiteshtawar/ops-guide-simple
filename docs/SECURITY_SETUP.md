@@ -1,14 +1,20 @@
 # Security Setup Guide
-## JWT-Based Authorization (No Database Required)
+## API Gateway-Based Authentication & Authorization
 
-**Version:** 1.0  
-**Last Updated:** November 6, 2025
+**Version:** 2.0  
+**Last Updated:** November 14, 2025
 
 ---
 
 ## Overview
 
-Production Support uses **JWT-based authorization** with role-based access control (RBAC). No database is needed because roles and permissions are embedded in the JWT token from your API Gateway.
+Production Support uses **API Gateway-based authentication and authorization**. The API Gateway handles all authentication, and the backend service receives pre-validated requests with user context in headers.
+
+**Key Points:**
+- ✅ **API Gateway handles authentication** - No JWT validation in backend
+- ✅ **Headers contain user context** - User ID, roles, etc. passed via headers
+- ✅ **Stateless architecture** - No database needed
+- ✅ **Simple backend** - Just reads headers, no auth logic
 
 ---
 
@@ -23,11 +29,17 @@ Production Support uses **JWT-based authorization** with role-based access contr
 ┌────────────────────────────────────────────┐
 │  API Gateway (xxx.apigtw.com)             │
 │  - SSL Termination                         │
-│  - JWT Validation                          │
+│  - Authentication (JWT/OAuth)              │
+│  - Authorization (Role-based)              │
 │  - Rate Limiting                           │
+│  - Request Validation                      │
 └──────────────┬─────────────────────────────┘
                │ HTTP (Private VPC)
-               │ Bearer Token: JWT with roles
+               │ Headers:
+               │ - X-User-ID: user@example.com
+               │ - Role-Name: Production Support
+               │ - Api-User: user@example.com
+               │ - Authorization: Bearer <token>
                ▼
 ┌────────────────────────────────────────────┐
 │  ALB (Internal)                            │
@@ -40,29 +52,62 @@ Production Support uses **JWT-based authorization** with role-based access contr
 ┌─────────────┐ ┌─────────────┐
 │ ECS Task 1  │ │ ECS Task 2  │
 │ HTTP :8093  │ │ HTTP :8093  │
-│ @PreAuthorize│ │ @PreAuthorize│
+│ (Reads      │ │ (Reads      │
+│  Headers)   │ │  Headers)   │
 └─────────────┘ └─────────────┘
   Private Subnet   Private Subnet
 ```
 
 **Security Layers:**
-1. **API Gateway** - HTTPS termination, initial JWT validation
+1. **API Gateway** - Handles all authentication and authorization
 2. **Private VPC** - Backend not internet-accessible
-3. **Backend** - JWT signature validation + role-based authorization
-4. **@PreAuthorize** - Method-level permission checks
+3. **Backend** - Simply reads headers, no auth logic needed
+4. **Header-based context** - User info passed via standard headers
 
 **Key Benefits:**
-- ✅ No database needed
-- ✅ Stateless authentication
-- ✅ Scales horizontally
-- ✅ Roles managed centrally (API Gateway/Auth Service)
-- ✅ Defense in depth (multiple security layers)
+- ✅ No authentication logic in backend
+- ✅ Centralized security at API Gateway
+- ✅ Stateless backend (scales horizontally)
+- ✅ Simple implementation (just read headers)
+
+---
+
+## Headers Passed by API Gateway
+
+### Standard Headers
+
+The API Gateway forwards the following headers to the backend:
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `X-User-ID` | User identifier | `engineer@example.com` |
+| `Role-Name` | User's role | `Production Support` |
+| `Api-User` | API user identifier | `engineer@example.com` |
+| `Authorization` | Bearer token (if needed) | `Bearer eyJhbGc...` |
+| `Lab-Id` | Lab identifier (if applicable) | `lab-123` |
+| `Discipline-Name` | Discipline (if applicable) | `Pathology` |
+| `Time-Zone` | User timezone | `America/New_York` |
+| `accept` | Accept header | `application/json` |
+
+### Header Usage in Runbooks
+
+Runbooks can check headers using `HEADER_CHECK` step type:
+
+```yaml
+- stepNumber: 1
+  stepType: "prechecks"
+  name: "Verify User Has Permission"
+  method: "HEADER_CHECK"
+  path: "Role-Name"
+  expectedResponse: "Production Support"
+  autoExecutable: true
+```
 
 ---
 
 ## Supported Roles
 
-### `production_support`
+### `Production Support`
 **Permissions:**
 - Process queries
 - View runbooks
@@ -70,23 +115,23 @@ Production Support uses **JWT-based authorization** with role-based access contr
 
 **Use Case:** Daily operational tasks
 
-### `support_admin`
+### `Support Admin`
 **Permissions:**
-- All `production_support` permissions
+- All `Production Support` permissions
 - Execute critical operations
 
 **Use Case:** Senior engineers, admin tasks
 
 ### Future Roles (Examples)
-- `support_viewer` - Read-only access
-- `support_manager` - Approval workflows
-- `system_admin` - Configuration changes
+- `Support Viewer` - Read-only access
+- `Support Manager` - Approval workflows
+- `System Admin` - Configuration changes
 
 ---
 
 ## Configuration
 
-### Development (Security Disabled)
+### Development (No API Gateway)
 
 ```yaml
 # application-dev.yml
@@ -97,149 +142,35 @@ spring:
 
 **Behavior:**
 - All endpoints accessible without authentication
-- No JWT validation
-- Easier local testing
+- Headers can be manually set for testing
+- Easier local development
 
-### Production (Security Enabled)
+### Production (With API Gateway)
 
 ```yaml
 # application-prod.yml
 spring:
   profiles:
     active: prod
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: https://your-auth-server.com/.well-known/jwks.json
-          issuer-uri: https://your-auth-server.com
 ```
 
 **Behavior:**
-- JWT required for all endpoints (except /health, /swagger-ui)
-- Roles extracted from JWT claims
-- 403 Forbidden if insufficient permissions
+- API Gateway handles all authentication
+- Backend receives pre-validated requests
+- Headers contain user context
+- No additional security configuration needed
 
 ---
 
-## JWT Token Format
+## API Gateway Setup
 
-### Example JWT Payload
+### AWS API Gateway Example
 
-```json
-{
-  "sub": "engineer@example.com",
-  "name": "John Doe",
-  "iat": 1699999999,
-  "exp": 1700999999,
-  "roles": ["ops_engineer"],
-  "scope": "production-support"
-}
-```
-
-### Required Claims
-
-| Claim | Description | Example |
-|-------|-------------|---------|
-| `sub` | User identifier | `engineer@example.com` |
-| `roles` | Array of role names | `["ops_engineer", "support_admin"]` |
-| `exp` | Expiration timestamp | `1700999999` |
-| `iss` | Token issuer | `https://auth.example.com` |
-
-### Roles Claim Location
-
-Spring Security will look for roles in:
-1. `roles` claim
-2. `authorities` claim  
-3. `scope` claim (if prefixed with `ROLE_`)
-
-**Configure if needed:**
-```java
-@Bean
-public JwtAuthenticationConverter jwtAuthenticationConverter() {
-    JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
-    converter.setAuthoritiesClaimName("roles");
-    converter.setAuthorityPrefix("ROLE_");
-    
-    JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
-    jwtConverter.setJwtGrantedAuthoritiesConverter(converter);
-    return jwtConverter;
-}
-```
-
----
-
-## Controller Authorization
-
-### Method-Level Security
-
-```java
-@PreAuthorize("hasAnyRole('ops_engineer', 'support_admin')")
-@PostMapping("/process")
-public ResponseEntity<OperationalResponse> processRequest(...) {
-    // Only accessible to ops_engineer or support_admin
-}
-```
-
-### Available Expressions
-
-**Role Checks:**
-```java
-@PreAuthorize("hasRole('ops_engineer')")           // Single role
-@PreAuthorize("hasAnyRole('ops_engineer', 'support_admin')")  // Multiple roles
-```
-
-**Authority Checks:**
-```java
-@PreAuthorize("hasAuthority('EXECUTE_STEPS')")     // Single authority
-@PreAuthorize("hasAnyAuthority('READ', 'WRITE')") // Multiple authorities
-```
-
-**Complex Expressions:**
-```java
-@PreAuthorize("hasRole('support_admin') and #request.userId == authentication.name")
-@PreAuthorize("hasRole('ops_engineer') or hasRole('support_viewer')")
-```
-
-**Method Parameters:**
-```java
-@PreAuthorize("#userId == authentication.name")
-public void updateUser(@PathVariable String userId) {
-    // Users can only update their own data
-}
-```
-
----
-
-## Protected Endpoints
-
-### Secured Endpoints
-
-| Endpoint | Method | Required Roles |
-|----------|--------|----------------|
-| `/api/v1/process` | POST | `ops_engineer`, `support_admin` |
-| `/api/v1/execute-step` | POST | `ops_engineer`, `support_admin` |
-| `/api/v1/classify` | POST | `ops_engineer`, `support_admin` |
-| `/api/v1/tasks/{taskId}/steps` | GET | Anyone authenticated |
-
-### Public Endpoints (No Auth Required)
-
-- `/api/v1/health` - Health check
-- `/actuator/**` - Spring Boot Actuator
-- `/swagger-ui/**` - API documentation
-- `/api-docs/**` - OpenAPI spec
-
----
-
-## API Gateway Integration
-
-### AWS API Gateway Setup
-
-**Custom Authorizer:**
+**Authorizer Configuration:**
 ```javascript
-// Lambda authorizer example
+// Lambda authorizer
 exports.handler = async (event) => {
-    const token = event.headers.Authorization.replace('Bearer ', '');
+    const token = event.headers.Authorization?.replace('Bearer ', '');
     
     // Validate JWT with your auth service
     const user = await validateJWT(token);
@@ -255,40 +186,48 @@ exports.handler = async (event) => {
             }]
         },
         context: {
-            roles: JSON.stringify(user.roles),
-            userId: user.sub
+            userId: user.sub,
+            roleName: user.roles?.[0] || 'default',
+            apiUser: user.sub
         }
     };
 };
 ```
 
-**Forward JWT to Backend:**
+**Integration Request:**
 ```yaml
-# API Gateway Integration
+# Forward headers to backend
 Integration Request:
   HTTP Headers:
-    Authorization: $context.authorizer.token
+    X-User-ID: $context.authorizer.userId
+    Role-Name: $context.authorizer.roleName
+    Api-User: $context.authorizer.apiUser
+    Authorization: $input.params('Authorization')
 ```
 
-### OAuth2/OIDC Setup
+### Other API Gateways
 
-**If using Auth0, Okta, Keycloak:**
-
+**Kong:**
 ```yaml
-# application-prod.yml
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          # Auth0
-          issuer-uri: https://your-domain.auth0.com/
-          
-          # Okta
-          issuer-uri: https://your-domain.okta.com/oauth2/default
-          
-          # Keycloak
-          issuer-uri: https://keycloak.example.com/realms/production-support
+plugins:
+  - name: jwt
+    config:
+      secret_is_base64: false
+  - name: request-transformer
+    config:
+      add:
+        headers:
+          - X-User-ID:$(consumer.username)
+          - Role-Name:$(consumer.role)
+```
+
+**NGINX:**
+```nginx
+location /api/ {
+    proxy_set_header X-User-ID $http_x_user_id;
+    proxy_set_header Role-Name $http_role_name;
+    proxy_pass http://backend:8093;
+}
 ```
 
 ---
@@ -298,72 +237,95 @@ spring:
 ### Local Testing (Development)
 
 ```bash
-# Run with dev profile (security disabled)
+# Run with dev profile (no auth required)
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-# All endpoints accessible without token
+# Test with manual headers
 curl -X POST http://localhost:8093/api/v1/process \
   -H "Content-Type: application/json" \
+  -H "X-User-ID: test@example.com" \
+  -H "Role-Name: Production Support" \
   -d '{"query": "cancel case 123"}'
 ```
 
-### Production Testing (With JWT)
+### Production Testing (With API Gateway)
 
 ```bash
-# Get JWT token from auth service
+# Get token from auth service
 TOKEN=$(curl -X POST https://auth.example.com/oauth/token \
   -d "grant_type=client_credentials" \
   -d "client_id=your-client-id" \
   -d "client_secret=your-secret" | jq -r '.access_token')
 
-# Call API with token
-curl -X POST http://localhost:8093/api/v1/process \
+# Call via API Gateway
+curl -X POST https://api.example.com/api/v1/process \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "cancel case 123"}'
 ```
 
-### Mock JWT for Testing
+---
 
-**Generate test JWT:**
-```bash
-# Install jwt-cli
-cargo install jwt-cli
+## Header Check Examples
 
-# Generate JWT with roles
-jwt encode --secret your-secret-key \
-  --sub "test@example.com" \
-  --exp +1h \
-  '{"roles": ["ops_engineer"]}'
+### Verify User Role
+
+```yaml
+- stepNumber: 1
+  stepType: "prechecks"
+  name: "Check if user has Production Support role"
+  method: "HEADER_CHECK"
+  path: "Role-Name"
+  expectedResponse: "Production Support"
+  autoExecutable: true
+```
+
+### Verify User ID
+
+```yaml
+- stepNumber: 1
+  stepType: "prechecks"
+  name: "Verify User ID"
+  method: "HEADER_CHECK"
+  path: "X-User-ID"
+  expectedResponse: "{user_id}"  # Placeholder from request
+  autoExecutable: true
 ```
 
 ---
 
 ## Error Responses
 
-### 401 Unauthorized
+### 401 Unauthorized (From API Gateway)
 
 **Missing or invalid token:**
 ```json
 {
-  "timestamp": "2025-11-06T00:00:00",
-  "status": 401,
-  "error": "Unauthorized",
-  "message": "Full authentication is required to access this resource",
-  "path": "/api/v1/process"
+  "message": "Unauthorized",
+  "statusCode": 401
 }
 ```
 
-### 403 Forbidden
+### 403 Forbidden (From API Gateway)
 
 **Insufficient permissions:**
 ```json
 {
-  "timestamp": "2025-11-06T00:00:00",
-  "status": 403,
-  "error": "Forbidden",
-  "message": "Access Denied",
-  "path": "/api/v1/execute-step"
+  "message": "Forbidden",
+  "statusCode": 403
+}
+```
+
+### 400 Bad Request (From Backend)
+
+**Missing required header:**
+```json
+{
+  "timestamp": "2025-11-14T00:00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Missing required header: X-User-ID",
+  "path": "/api/v1/process"
 }
 ```
 
@@ -371,128 +333,105 @@ jwt encode --secret your-secret-key \
 
 ## Security Best Practices
 
-### JWT Validation
+### API Gateway
 
 ✅ **DO:**
 - Validate JWT signature
 - Check expiration (`exp` claim)
 - Verify issuer (`iss` claim)
 - Use HTTPS in production
-- Rotate signing keys regularly
+- Rate limit requests
+- Log security events
 
 ❌ **DON'T:**
-- Store sensitive data in JWT
-- Use weak signing algorithms (HS256 with shared secrets)
-- Accept unsigned tokens
-- Ignore expiration
+- Bypass authentication
+- Forward invalid tokens
+- Expose backend directly
+- Skip rate limiting
 
-### Role Management
+### Backend
 
 ✅ **DO:**
-- Use principle of least privilege
-- Assign roles based on job function
-- Audit role assignments regularly
-- Use descriptive role names
+- Trust headers from API Gateway
+- Validate required headers exist
+- Log header values for audit
+- Use header values for authorization checks
 
 ❌ **DON'T:**
-- Hard-code roles in application
-- Give everyone admin access
-- Use generic role names (user, admin)
-
-### Token Handling
-
-✅ **DO:**
-- Use short-lived tokens (1-24 hours)
-- Implement token refresh
-- Store tokens securely (HttpOnly cookies, secure storage)
-- Clear tokens on logout
-
-❌ **DON'T:**
-- Store tokens in localStorage (XSS risk)
-- Share tokens between users
-- Log tokens
-- Use same token across environments
+- Validate JWT tokens (API Gateway does this)
+- Implement authentication logic
+- Trust headers from untrusted sources
+- Expose endpoints without API Gateway
 
 ---
 
 ## Troubleshooting
 
-### Issue: 401 Unauthorized
+### Issue: Missing Headers
 
 **Check:**
-1. JWT is present in `Authorization` header
-2. Format is `Bearer <token>`
-3. Token hasn't expired
-4. Issuer URI is correct
+1. API Gateway is forwarding headers correctly
+2. Integration request includes header mapping
+3. Headers are not being stripped by ALB/proxy
 
 ```bash
-# Decode JWT to check claims
-jwt decode <your-token>
+# Check what headers backend receives
+curl -v http://localhost:8093/api/v1/process \
+  -H "X-User-ID: test@example.com"
 ```
 
-### Issue: 403 Forbidden
+### Issue: Wrong Role
 
 **Check:**
-1. User has required role in JWT
-2. Role name matches @PreAuthorize expression
-3. Profile is set to 'prod' (dev bypasses security)
+1. API Gateway authorizer returns correct role
+2. Header name matches runbook expectation
+3. Role value matches `expectedResponse` in YAML
 
-```bash
-# Check JWT roles claim
-jwt decode <your-token> | jq .roles
-```
-
-### Issue: Security is bypassed
+### Issue: 401/403 from API Gateway
 
 **Check:**
-1. Active profile is 'prod' not 'dev'
-2. JWT validation is configured
-3. SecurityConfig is loaded
-
-```bash
-# Check active profile
-curl http://localhost:8093/actuator/env | jq '.propertySources[] | select(.name | contains("applicationConfig"))'
-```
+1. Token is valid and not expired
+2. Token has required scopes/roles
+3. API Gateway authorizer is configured correctly
 
 ---
 
-## Migration from No Auth
+## Migration Notes
 
-If migrating from unauthenticated to authenticated:
+### From JWT Validation to Header-Based
 
-**Phase 1: Add security (disabled by default)**
-```yaml
-spring:
-  profiles:
-    active: dev  # Security disabled
+If migrating from JWT validation in backend to API Gateway:
+
+**Before:**
+```java
+@PreAuthorize("hasRole('ops_engineer')")
+public ResponseEntity<OperationalResponse> processRequest(...) {
+    // JWT validated by Spring Security
+}
 ```
 
-**Phase 2: Test with JWT**
-```yaml
-spring:
-  profiles:
-    active: prod  # Security enabled
+**After:**
+```java
+// No @PreAuthorize needed - API Gateway handles auth
+public ResponseEntity<OperationalResponse> processRequest(...) {
+    String userId = request.getHeader("X-User-ID");
+    String role = request.getHeader("Role-Name");
+    // Use headers directly
+}
 ```
-
-**Phase 3: Roll out gradually**
-- Enable for test environment
-- Validate with real tokens
-- Monitor 401/403 errors
-- Enable for production
 
 ---
 
 ## Summary
 
-✅ **No database needed** - Roles in JWT token  
-✅ **@PreAuthorize** - Method-level security  
-✅ **Dev mode** - Security disabled for local testing  
-✅ **Prod mode** - Full JWT validation  
-✅ **API Gateway** - Central authentication  
+✅ **API Gateway handles authentication** - No backend auth logic  
+✅ **Headers contain user context** - Simple header reading  
+✅ **Stateless backend** - Scales horizontally  
+✅ **No database needed** - All context in headers  
+✅ **Simple implementation** - Just read headers from requests  
 
 **Questions?** Contact security team or DevOps.
 
 ---
 
-**Last Updated:** November 6, 2025
-
+**Last Updated:** November 14, 2025

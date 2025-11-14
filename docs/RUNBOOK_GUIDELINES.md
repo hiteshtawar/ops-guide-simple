@@ -1,517 +1,367 @@
 # Runbook Guidelines
-## How to Write Proper Runbooks for Production Support
+## How to Write YAML Runbooks for Production Support
 
-**Version:** 1.0  
-**Last Updated:** November 7, 2025
+**Version:** 2.0  
+**Last Updated:** November 14, 2025
+
+---
+
+## Overview
+
+Runbooks are defined in **YAML format** and stored in `src/main/resources/runbooks/`. The system automatically discovers and loads all YAML files on startup—no code changes required.
+
+**Prerequisite:** Downstream services must have **PATCH, POST, or DELETE APIs** ready for the steps to be executed.
 
 ---
 
 ## Runbook Structure
 
-### Required Sections
+### Complete YAML Schema
 
-```markdown
-# [Operation Name] Runbook
+```yaml
+useCase:
+  id: "UNIQUE_TASK_ID"
+  name: "Human Readable Name"
+  description: "What this operation does"
+  category: "category-name"
+  version: "1.0"
+  downstreamService: "service-name"
 
-**Task ID**: [TASK_TYPE_ENUM]  
-**Version**: [X.Y]  
-**Last Updated**: [YYYY-MM-DD]
+classification:
+  keywords:
+    - "primary keyword"
+    - "alternative keyword"
+  synonyms:
+    word1: ["synonym1", "synonym2"]
+  requiredEntities:
+    - entity1
+    - entity2
+  minConfidence: 1.0
 
-## Overview
-Brief description of what this operation does.
+extraction:
+  entities:
+    entity1:
+      type: "string"
+      patterns:
+        - "regex pattern with (capture group)"
+      required: true
+      validation:
+        regex: "^pattern$"
+        enumValues: ["value1", "value2"]
+        errorMessage: "Validation error message"
+      transform: "lowercase" # optional: lowercase, uppercase, trim
 
-## Pre-checks
-Steps to verify before executing the main operation.
+execution:
+  timeout: 30
+  retryPolicy:
+    maxAttempts: 3
+    backoffMs: 1000
+  
+  steps:
+    - stepNumber: 1
+      stepType: "prechecks" # or "procedure", "postchecks", "rollback"
+      name: "Step Name"
+      method: "GET" # GET, POST, PATCH, PUT, DELETE, LOCAL_MESSAGE, HEADER_CHECK
+      path: "/api/path/{placeholder}"
+      body: # Optional, can be string or object
+        key: "{placeholder}"
+      expectedResponse: "Expected value" # For HEADER_CHECK
+      message: "Error message if step fails"
+      autoExecutable: true
 
-## Procedure
-Main operation steps.
-
-## Post-checks
-Verification steps after the operation.
-
-## Rollback
-Steps to rollback if something goes wrong.
+localMessage: "Message shown before execution"
+warnings:
+  - "Warning message 1"
+  - "Warning message 2"
+metadata:
+  owner: "team-name"
+  tags: ["tag1", "tag2"]
 ```
 
 ---
 
-## Step Format (IMPORTANT!)
+## Step Types
 
-### ✅ CORRECT Format
+### Prechecks (`stepType: "prechecks"`)
 
-```markdown
-## Pre-checks
-
-1. **Verify Case Exists**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
-
-2. **Check Case Not Already Cancelled**
-   ```bash
-   GET /api/v2/cases/{case_id}/status
-   # Expected: status != "cancelled"
-   ```
-```
-
-### ❌ WRONG Format
-
-```markdown
-## Pre-checks
-
-1. Verify Case Exists (missing **)
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
-
-2. **Check Case Not Already Cancelled (missing closing **)
-   ```bash
-   GET /api/v2/cases/{case_id}/status
-   ```
-```
-
----
-
-## Step Naming Rules
-
-### Required Format
-
-```
-[Number]. **[Step Name]**
-   ```[language]
-   [API Call or Command]
-   ```
-```
-
-**Pattern:** `1. **Step Name Here**`
-
-**Rules:**
-1. Start with number and period: `1.`
-2. **MUST** have `**` before and after step name
-3. Followed by indented code block
-4. No blank line between step name and code block
-
-### Examples
-
-```markdown
-1. **Verify User Permissions**
-   ```bash
-   GET /api/v1/users/{user_id}/roles
-   ```
-
-2. **Get Current Case Status**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
-
-3. **Cancel the Case**
-   ```bash
-   POST /api/v2/cases/{case_id}/cancel
-   Headers:
-     Authorization: Bearer {token}
-   
-   Body:
-   {
-     "reason": "operational_request"
-   }
-   ```
-```
-
----
-
-## API Call Format
-
-### HTTP Methods Supported
-
-- `GET` - Retrieve data
-- `POST` - Create or execute
-- `PATCH` - Partial update
-- `PUT` - Full update
-- `DELETE` - Remove
-
-### Basic API Call
-
-```markdown
-1. **Step Name**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
-```
-
-### API Call with Headers
-
-```markdown
-2. **Cancel Case with Auth**
-   ```bash
-   POST /api/v2/cases/{case_id}/cancel
-   Headers:
-     Authorization: Bearer {token}
-     X-User-ID: {user_id}
-     X-Idempotency-Key: {idempotency_key}
-   ```
-```
-
-### API Call with Request Body
-
-```markdown
-3. **Update Case Status**
-   ```bash
-   PATCH /api/v2/cases/{case_id}
-   Headers:
-     Authorization: Bearer {token}
-     Content-Type: application/json
-   
-   Body:
-   {
-     "status": "cancelled",
-     "reason": "operational_request",
-     "notes": "Cancelled via Production Support"
-   }
-   ```
-```
-
----
-
-## Entity Placeholders
-
-### Supported Placeholders
-
-| Placeholder | Description | Example Value |
-|-------------|-------------|---------------|
-| `{case_id}` | Case identifier | `2025123P6732` |
-| `{user_id}` | User identifier | `engineer@example.com` |
-| `{status}` | Target status | `pending`, `grossing` |
-| `{token}` | Auth token | `eyJhbGc...` |
-| `{idempotency_key}` | Unique request ID | `uuid` |
-
-### Usage in URLs
-
-```markdown
-GET /api/v2/cases/{case_id}
-PATCH /api/v2/cases/{case_id}/status
-```
-
-### Usage in Request Bodies
-
-```markdown
-Body:
-{
-  "case_id": "{case_id}",
-  "new_status": "{status}",
-  "updated_by": "{user_id}"
-}
-```
-
----
-
-## Step Types (Sections)
-
-### Pre-checks
-**Purpose:** Check user permissions and validate preconditions before execution
+**Purpose:** Validate preconditions before execution
 
 **Characteristics:**
-- `autoExecutable: true` (usually)
+- Usually `autoExecutable: true`
 - Non-destructive operations
 - GET requests or validation logic
 
-**Best Practice:** Use preview/validation APIs that combine multiple checks
-
 **Example:**
-```markdown
-## Pre-checks
-
-1. **Verify User Has Permissions**
-   ```bash
-   GET /api/v1/users/{user_id}/permissions/cancel_case
-   ```
-
-2. **Preview Operation Impact**
-   ```bash
-   GET /api/v2/cases/{case_id}/cancel/preview
-   Headers:
-     Authorization: Bearer {token}
-   ```
-
-**Note:** The preview API validates that:
-- Case exists
-- Case is not already cancelled
-- No blocking dependencies exist
+```yaml
+- stepNumber: 1
+  stepType: "prechecks"
+  name: "Verify User Has Permission"
+  method: "HEADER_CHECK"
+  path: "Role-Name"
+  expectedResponse: "Production Support"
+  autoExecutable: true
 ```
 
-**Why?** Consolidate multiple validation checks into one API call for efficiency.
+### Procedure (`stepType: "procedure"`)
 
-### Procedure
 **Purpose:** Main operation steps
 
 **Characteristics:**
-- `autoExecutable: false` (requires approval)
+- Usually `autoExecutable: false` (requires approval)
 - Destructive or critical operations
 - POST, PATCH, DELETE requests
 
 **Example:**
-```markdown
-## Procedure
-
-1. **Cancel the Case**
-   ```bash
-   POST /api/v2/cases/{case_id}/cancel
-   Headers:
-     Authorization: Bearer {token}
-   
-   Body:
-   {
-     "reason": "operational_request"
-   }
-   ```
+```yaml
+- stepNumber: 2
+  stepType: "procedure"
+  name: "Cancel the Case"
+  method: "DELETE"
+  path: "/lims-api/cases/{case_id}"
+  message: "Failed to cancel case {case_id}"
+  autoExecutable: false
 ```
 
-### Post-checks
+### Postchecks (`stepType: "postchecks"`)
+
 **Purpose:** Verify operation succeeded
 
 **Characteristics:**
-- `autoExecutable: true` (usually)
+- Usually `autoExecutable: true`
 - Verification steps
 - GET requests
 
 **Example:**
-```markdown
-## Post-checks
-
-1. **Verify Case Cancelled**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   # Expected: status="cancelled"
-   ```
+```yaml
+- stepNumber: 3
+  stepType: "postchecks"
+  name: "Verify Case Cancelled"
+  method: "GET"
+  path: "/lims-api/cases/{case_id}"
+  autoExecutable: true
 ```
 
-### Rollback
+### Rollback (`stepType: "rollback"`)
+
 **Purpose:** Undo changes if operation fails
 
 **Example:**
-```markdown
-## Rollback
-
-1. **Restore Original Status**
-   ```bash
-   PATCH /api/v2/cases/{case_id}
-   Body:
-   {
-     "status": "{original_status}"
-   }
-   ```
+```yaml
+- stepNumber: 4
+  stepType: "rollback"
+  name: "Restore Original Status"
+  method: "PATCH"
+  path: "/lims-api/cases/{case_id}/status"
+  body:
+    status: "{original_status}"
 ```
 
 ---
 
-## Common Mistakes to Avoid
+## HTTP Methods
 
-### ❌ Mistake 1: Missing `**` Around Step Name
+### Supported Methods
 
-```markdown
-1. Verify Case Exists  ❌
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
+| Method | Use Case | Example |
+|--------|----------|---------|
+| `GET` | Retrieve data | `GET /api/cases/{case_id}` |
+| `POST` | Create or execute | `POST /api/cases/{case_id}/cancel` |
+| `PATCH` | Partial update | `PATCH /api/cases/{case_id}/status` |
+| `PUT` | Full update | `PUT /api/cases/{case_id}` |
+| `DELETE` | Remove | `DELETE /api/cases/{case_id}` |
+| `LOCAL_MESSAGE` | Display message | No API call |
+| `HEADER_CHECK` | Validate header | Check `Role-Name` header |
+
+### Method Examples
+
+**GET:**
+```yaml
+- stepNumber: 1
+  method: "GET"
+  path: "/lims-api/cases/{case_id}"
 ```
 
-**Fix:**
-```markdown
-1. **Verify Case Exists**  ✅
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
+**POST with Body:**
+```yaml
+- stepNumber: 2
+  method: "POST"
+  path: "/lims-api/cases/{case_id}/cancel"
+  body:
+    reason: "operational_request"
+    notes: "Cancelled via Production Support"
 ```
 
-### ❌ Mistake 2: Blank Line Between Step Name and Code Block
-
-```markdown
-1. **Verify Case Exists**
-                          ← Extra blank line
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
+**PATCH with Body:**
+```yaml
+- stepNumber: 3
+  method: "PATCH"
+  path: "/lims-api/samples/{barcode}/status"
+  body:
+    sampleStatus: "{sampleStatus}"
 ```
 
-**Fix:**
-```markdown
-1. **Verify Case Exists**
-   ```bash  ← No blank line
-   GET /api/v2/cases/{case_id}
-   ```
+**LOCAL_MESSAGE:**
+```yaml
+- stepNumber: 1
+  method: "LOCAL_MESSAGE"
+  name: "Display Warning"
+  message: "This operation will cancel the case permanently"
 ```
 
-### ❌ Mistake 3: Missing HTTP Method
-
-```markdown
-1. **Get Case**
-   ```bash
-   /api/v2/cases/{case_id}  ❌ Missing GET
-   ```
-```
-
-**Fix:**
-```markdown
-1. **Get Case**
-   ```bash
-   GET /api/v2/cases/{case_id}  ✅
-   ```
-```
-
-### ❌ Mistake 4: Incorrect Indentation
-
-```markdown
-1. **Get Case**
-```bash  ❌ Not indented
-GET /api/v2/cases/{case_id}
-```
-```
-
-**Fix:**
-```markdown
-1. **Get Case**
-   ```bash  ✅ 3 spaces indent
-   GET /api/v2/cases/{case_id}
-   ```
-```
-
-### ❌ Mistake 5: Mixing Comments with API Path
-
-```markdown
-1. **Get Case**
-   ```bash
-   # Verify user has permissions  ← Comment becomes description
-   GET /api/v1/users/{user_id}/roles
-   ```
-```
-
-**Fix:** Use step name for description, not comments
-```markdown
-1. **Verify User Has Permissions**
-   ```bash
-   GET /api/v1/users/{user_id}/roles
-   ```
+**HEADER_CHECK:**
+```yaml
+- stepNumber: 1
+  method: "HEADER_CHECK"
+  path: "Role-Name"
+  expectedResponse: "Production Support"
 ```
 
 ---
 
-## Parser Behavior
+## Entity Extraction
 
-### What Gets Extracted
+### Pattern Definition
 
-```markdown
-1. **Verify Case Exists**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   Headers:
-     Authorization: Bearer {token}
-   
-   Body:
-   {
-     "filter": "active"
-   }
-   ```
+```yaml
+extraction:
+  entities:
+    case_id:
+      type: "string"
+      patterns:
+        - "(?:a\\s+|the\\s+)?case\\s+(\\d{4,}\\w+)" # Handles "a case", "the case"
+        - "(\\d{7}[A-Z]\\d{4})" # Format: 2025123P6732
+      required: true
+      validation:
+        regex: "^\\d{4,}\\w*$"
+        errorMessage: "Case ID must be in format: 2025123P6732"
 ```
 
-**Extracted as:**
-```json
-{
-  "stepNumber": 1,
-  "description": "Verify Case Exists",
-  "method": "GET",
-  "path": "/api/v2/cases/{case_id}",
-  "requestBody": "Headers:\n  Authorization: Bearer {token}\n\nBody:\n{\n  \"filter\": \"active\"\n}",
-  "expectedResponse": null,
-  "autoExecutable": true,
-  "stepType": "precheck"
-}
+### Pattern Best Practices
+
+1. **Use capture groups:** `(\\d{7}[A-Z]\\d{4})` captures the value
+2. **Handle variations:** `(?:a\\s+|the\\s+)?` handles optional articles
+3. **Multiple patterns:** Provide fallback patterns for different formats
+4. **Validation:** Always validate extracted values with regex
+
+### Transform Options
+
+```yaml
+transform: "lowercase"  # Convert to lowercase
+transform: "uppercase"  # Convert to uppercase
+transform: "trim"       # Remove leading/trailing whitespace
 ```
 
-### Step Description Extraction
+---
 
-**Pattern:** `^\d+\.\s+\*\*(.+)\*\*$`
+## Classification
 
-**Matches:**
-- `1. **Step Name**` ✅
-- `2. **Another Step**` ✅
+### Keywords
 
-**Does NOT Match:**
-- `1. Step Name` ❌ (missing **)
-- `1. **Step Name` ❌ (missing closing **)
-- `**Step Name**` ❌ (missing number)
+```yaml
+classification:
+  keywords:
+    - "cancel case"
+    - "delete case"
+    - "abort case"
+  synonyms:
+    cancel: ["delete", "abort", "remove"]
+    case: ["a case", "the case"]
+  minConfidence: 1.0
+```
+
+**Best Practices:**
+- Include common variations
+- Use synonyms for flexibility
+- Set `minConfidence` to avoid false positives
+
+---
+
+## Placeholders
+
+### Supported Placeholders
+
+Placeholders in paths and bodies are replaced with extracted entities:
+
+```yaml
+path: "/lims-api/cases/{case_id}"
+body:
+  sampleId: "{barcode}"
+  status: "{sampleStatus}"
+```
+
+**Example:**
+- Query: `"cancel case 2025123P6732"`
+- Extracted: `{case_id: "2025123P6732"}`
+- Resolved path: `/lims-api/cases/2025123P6732`
 
 ---
 
 ## Complete Example
 
-### cancel-case-runbook.md
+### cancel-case.yaml
 
-```markdown
-# Cancel Case Runbook
+```yaml
+useCase:
+  id: "CANCEL_CASE"
+  name: "Cancel Case"
+  description: "Complete cancellation of a case including cleanup"
+  category: "case-management"
+  version: "3.1"
+  downstreamService: "ap-services"
 
-**Task ID**: CANCEL_CASE  
-**Version**: 1.0  
-**Last Updated**: 2025-11-07
+classification:
+  keywords:
+    - "cancel case"
+    - "delete case"
+    - "abort case"
+  synonyms:
+    cancel: ["delete", "abort", "remove"]
+    case: ["a case", "the case"]
+  requiredEntities:
+    - case_id
 
-## Overview
-Cancel a pathology case with proper validation and cleanup.
+extraction:
+  entities:
+    case_id:
+      type: "string"
+      patterns:
+        - "(?:a\\s+|the\\s+)?case\\s+(\\d{4,}\\w+)"
+        - "(\\d{7}[A-Z]\\d{4})"
+      required: true
+      validation:
+        regex: "^\\d{4,}\\w*$"
+        errorMessage: "Case ID must be in format: 2025123P6732"
 
-## Pre-checks
+execution:
+  timeout: 30
+  steps:
+    - stepNumber: 1
+      stepType: "prechecks"
+      name: "Verify User Has Cancel Permission"
+      method: "HEADER_CHECK"
+      path: "Role-Name"
+      expectedResponse: "Production Support"
+      autoExecutable: true
+    
+    - stepNumber: 2
+      stepType: "procedure"
+      name: "Cancel the Case"
+      method: "DELETE"
+      path: "/lims-api/cases/{case_id}"
+      message: "Failed to cancel case {case_id}"
+      autoExecutable: false
+    
+    - stepNumber: 3
+      stepType: "postchecks"
+      name: "Verify Case Cancelled"
+      method: "GET"
+      path: "/lims-api/cases/{case_id}"
+      autoExecutable: true
 
-1. **Verify User Has Cancel Permission**
-   ```bash
-   GET /api/v1/users/{user_id}/permissions
-   ```
-
-2. **Verify Case Exists**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
-
-3. **Check Case Not Already Cancelled**
-   ```bash
-   GET /api/v2/cases/{case_id}/status
-   ```
-
-## Procedure
-
-1. **Cancel the Case**
-   ```bash
-   POST /api/v2/cases/{case_id}/cancel
-   Headers:
-     Authorization: Bearer {token}
-     X-User-ID: {user_id}
-     Content-Type: application/json
-   
-   Body:
-   {
-     "reason": "operational_request",
-     "notes": "Cancelled via Production Support"
-   }
-   ```
-
-## Post-checks
-
-1. **Verify Case Status Updated**
-   ```bash
-   GET /api/v2/cases/{case_id}
-   ```
-
-2. **Verify Stakeholders Notified**
-   ```bash
-   GET /api/v2/cases/{case_id}/notifications
-   ```
-
-## Rollback
-
-1. **Restore Case to Active**
-   ```bash
-   PATCH /api/v2/cases/{case_id}/status
-   Body:
-   {
-     "status": "active",
-     "reason": "rollback_from_cancellation"
-   }
-   ```
+localMessage: "Case will be permanently cancelled and removed from workpool"
+warnings:
+  - "This action cannot be undone"
+  - "All associated materials will be cancelled"
 ```
 
 ---
@@ -520,99 +370,157 @@ Cancel a pathology case with proper validation and cleanup.
 
 Before committing a runbook, verify:
 
-- [ ] Step names wrapped in `**Step Name**`
-- [ ] Each step has number: `1.`, `2.`, etc.
-- [ ] Code blocks properly indented (3 spaces)
-- [ ] HTTP method specified: GET, POST, PATCH, etc.
-- [ ] API paths start with `/api/`
-- [ ] Placeholders use `{variable_name}` format
-- [ ] Sections exist: Pre-checks, Procedure, Post-checks
-- [ ] No typos in API paths or placeholders
-- [ ] Headers and Body properly formatted
+- [ ] `useCase.id` is unique and follows `UPPER_SNAKE_CASE`
+- [ ] All required sections present: `useCase`, `classification`, `execution`
+- [ ] `stepNumber` is sequential (1, 2, 3...)
+- [ ] `stepType` is one of: `prechecks`, `procedure`, `postchecks`, `rollback`
+- [ ] `method` is valid: `GET`, `POST`, `PATCH`, `PUT`, `DELETE`, `LOCAL_MESSAGE`, `HEADER_CHECK`
+- [ ] `path` uses placeholders like `{entity_name}`
+- [ ] All placeholders have corresponding extraction patterns
+- [ ] `requiredEntities` matches extraction entity names
+- [ ] Validation regex patterns are correct
+- [ ] YAML syntax is valid (use a YAML validator)
 
 ---
 
 ## Testing Your Runbook
 
-### 1. Restart Server
+### 1. Validate YAML Syntax
+
+```bash
+# Install yamllint
+pip install yamllint
+
+# Validate
+yamllint src/main/resources/runbooks/your-runbook.yaml
+```
+
+### 2. Restart Server
 
 ```bash
 cd /Users/hiteshtawar/ops-guide-simple
 ./start-server.sh
 ```
 
-### 2. Check Logs
+### 3. Check Logs
 
 Look for:
 ```
-Loading runbook: CANCEL_CASE from runbooks/cancel-case-runbook.md
-Loaded X steps for CANCEL_CASE
+Loading runbooks from: classpath:runbooks/
+Successfully loaded 3 runbooks: [CANCEL_CASE, UPDATE_SAMPLE_STATUS, YOUR_TASK]
 ```
 
-### 3. Test API
+### 4. Test Classification
 
 ```bash
-curl http://localhost:8093/api/v1/process \
+curl -X POST http://localhost:8093/api/v1/classify \
   -H "Content-Type: application/json" \
-  -d '{"query": "cancel case 2025P1234", "userId": "test"}'
+  -d '{"query": "your test query"}'
 ```
 
-### 4. Verify Response
+### 5. Test Full Flow
 
-Check that:
-- Steps have proper descriptions (not "API call" or comments)
-- All steps have correct method and path
-- stepType is correct (precheck, procedure, postcheck, rollback)
+```bash
+curl -X POST http://localhost:8093/api/v1/process \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "your test query with entities",
+    "userId": "test@example.com",
+    "downstreamService": "ap-services"
+  }'
+```
 
 ---
 
-## Quick Fix for Your Current Issue
+## Common Mistakes
 
-### Current (Wrong)
-```markdown
-1. Authorization Check
-   ```bash
-   GET /api/v1/users/{user_id}/roles
-   ```
+### ❌ Missing Required Fields
+
+```yaml
+useCase:
+  id: "MY_TASK"
+  # Missing: name, description, downstreamService
 ```
 
-### Fixed (Correct)
-```markdown
-1. **Verify User Has Cancel Permission**
-   ```bash
-   GET /api/v1/users/{user_id}/permissions/cancel_case
-   ```
+**Fix:**
+```yaml
+useCase:
+  id: "MY_TASK"
+  name: "My Task"
+  description: "What this does"
+  downstreamService: "ap-services"
 ```
 
-**Changes:**
-1. Added `**` around step name
-2. Made step name descriptive (not just "Authorization Check")
-3. Fixed API path typo (`cacncel_case` → `cancel_case`)
-4. Removed comment line (description comes from step name)
+### ❌ Invalid Step Type
+
+```yaml
+stepType: "precheck"  # ❌ Should be "prechecks"
+```
+
+**Fix:**
+```yaml
+stepType: "prechecks"  # ✅
+```
+
+### ❌ Placeholder Not Extracted
+
+```yaml
+path: "/api/{case_id}"  # ❌ case_id not in extraction.entities
+```
+
+**Fix:**
+```yaml
+extraction:
+  entities:
+    case_id:  # ✅ Add extraction pattern
+      patterns:
+        - "(\\d{7}[A-Z]\\d{4})"
+```
+
+### ❌ Missing Validation
+
+```yaml
+entities:
+  case_id:
+    patterns: ["(.*)"]  # ❌ Too permissive
+```
+
+**Fix:**
+```yaml
+entities:
+  case_id:
+    patterns: ["(\\d{7}[A-Z]\\d{4})"]
+    validation:
+      regex: "^\\d{7}[A-Z]\\d{4}$"
+```
 
 ---
 
-## Summary
+## Best Practices
 
 ✅ **DO:**
-- Use `1. **Step Name**` format
-- Keep step names descriptive
-- Indent code blocks with 3 spaces
-- Start API paths with HTTP method
-- Use clear placeholder names
+- Use descriptive step names
+- Include validation for all entities
+- Test with various query formats
+- Use synonyms for flexibility
+- Set appropriate `autoExecutable` flags
+- Include error messages for steps
 
 ❌ **DON'T:**
-- Omit `**` markers
-- Use generic names like "API call"
-- Put description in comments
-- Have blank lines between step name and code block
-- Mix different indentation styles
+- Use generic step names like "API call"
+- Skip validation
+- Hard-code values (use placeholders)
+- Mix step types incorrectly
+- Use invalid HTTP methods
 
 ---
 
-**Questions?** Check existing runbooks for reference:
-- `src/main/resources/runbooks/cancel-case-runbook.md`
-- `src/main/resources/runbooks/update-case-status-runbook.md`
+## Reference Examples
 
-**Last Updated:** November 7, 2025
+See existing runbooks for reference:
+- `src/main/resources/runbooks/cancel-case.yaml`
+- `src/main/resources/runbooks/update-sample-status.yaml`
 
+---
+
+**Last Updated:** November 14, 2025

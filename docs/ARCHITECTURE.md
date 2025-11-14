@@ -24,6 +24,8 @@ OpsGuide Simple is a **YAML-driven operational automation platform** that enable
 3. **Immediately available** → Ready for production use
 4. **No code changes** → No deployments → No engineering cycles
 
+**Prerequisite:** The only requirement is that downstream services must have **PATCH, POST, or DELETE APIs** ready for the steps to be executed. The runbook system will automatically call these APIs based on the YAML configuration.
+
 **Business Impact:**
 - **Time to Market**: New use cases in minutes, not weeks
 - **Engineering Efficiency**: Developers focus on platform, not individual use cases
