@@ -554,6 +554,70 @@ class RunbookAdapterTest {
         assertEquals("/api/test", stepResult.getPath());
     }
 
+    @Test
+    void toOperationalResponse_withNullWarnings_handlesGracefully() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        useCase.setWarnings(null);
+        Map<String, String> entities = new HashMap<>();
+        
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        assertNull(response.getWarnings());
+    }
+
+    @Test
+    void toOperationalResponse_withEmptyWarnings_handlesGracefully() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        useCase.setWarnings(List.of());
+        Map<String, String> entities = new HashMap<>();
+        
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        assertNotNull(response.getWarnings());
+        assertTrue(response.getWarnings().isEmpty());
+    }
+
+    @Test
+    void toOperationalResponse_replacePlaceholdersInMap_withNestedNullValues() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition httpStep = new UseCaseDefinition.StepDefinition();
+        httpStep.setStepNumber(2);
+        httpStep.setMethod("POST");
+        httpStep.setPath("/api/test");
+        Map<String, Object> body = new HashMap<>();
+        body.put("key1", "{barcode}");
+        body.put("key2", null);
+        httpStep.setBody(body);
+        httpStep.setStepType("procedure");
+        useCase.getExecution().getSteps().add(httpStep);
+        
+        Map<String, String> entities = Map.of("barcode", "BC123456");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep step = response.getSteps().getProcedure().get(0);
+        assertNotNull(step.getRequestBody());
+        assertTrue(step.getRequestBody().contains("BC123456"));
+    }
+
+    @Test
+    void toOperationalResponse_replacePlaceholders_withMultiplePlaceholders() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(2);
+        step.setMethod("GET");
+        step.setPath("/api/{barcode}/status/{sampleStatus}");
+        step.setDescription("Update {barcode} to {sampleStatus}");
+        step.setStepType("procedure");
+        useCase.getExecution().getSteps().add(step);
+        
+        Map<String, String> entities = Map.of("barcode", "BC123456", "sampleStatus", "Completed");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep stepResult = response.getSteps().getProcedure().get(0);
+        assertEquals("/api/BC123456/status/Completed", stepResult.getPath());
+        assertEquals("Update BC123456 to Completed", stepResult.getDescription());
+    }
+
     // Helper method to create a basic use case for testing
     private UseCaseDefinition createBasicUseCase() {
         UseCaseDefinition useCase = new UseCaseDefinition();

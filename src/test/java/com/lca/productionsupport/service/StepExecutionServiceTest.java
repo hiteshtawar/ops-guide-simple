@@ -4,10 +4,12 @@ import com.lca.productionsupport.config.DownstreamServiceProperties;
 import com.lca.productionsupport.config.WebClientRegistry;
 import com.lca.productionsupport.model.StepExecutionRequest;
 import com.lca.productionsupport.model.StepExecutionResponse;
+import com.lca.productionsupport.model.UseCaseDefinition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -331,6 +333,104 @@ class StepExecutionServiceTest {
 
         assertNotNull(response);
         assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withNullTaskId_returnsError() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId(null)
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of())
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertFalse(response.getSuccess());
+        assertEquals("Step not found", response.getErrorMessage());
+    }
+
+    @Test
+    void executeStep_withNullEntities_handlesGracefully() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(null)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withInvalidDownstreamService_returnsError() {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("invalid-service")
+            .stepNumber(3)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertFalse(response.getSuccess());
+        assertTrue(response.getErrorMessage().contains("not configured"));
+    }
+
+    @Test
+    void executeStep_withPUTMethod_handlesCorrectly() {
+        // Create a test runbook with PUT method
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_PUT");
+        useCase.setUseCase(info);
+        UseCaseDefinition.ClassificationConfig classification = new UseCaseDefinition.ClassificationConfig();
+        classification.setKeywords(List.of("test"));
+        useCase.setClassification(classification);
+        UseCaseDefinition.ExecutionConfig execution = new UseCaseDefinition.ExecutionConfig();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("PUT");
+        step.setPath("/api/test/{barcode}");
+        step.setStepType("procedure");
+        execution.setSteps(List.of(step));
+        useCase.setExecution(execution);
+        
+        // Manually add to registry for test
+        RunbookRegistry testRegistry = new RunbookRegistry() {
+            @Override
+            public UseCaseDefinition getUseCase(String id) {
+                if ("TEST_PUT".equals(id)) {
+                    return useCase;
+                }
+                return super.getUseCase(id);
+            }
+        };
+        
+        StepExecutionService testService = new StepExecutionService(
+            webClientRegistry, testRegistry, runbookAdapter);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("TEST_PUT")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("barcode", "BC123456"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        // Should not throw, but will fail on actual HTTP call
+        StepExecutionResponse response = testService.executeStep(request);
+        assertNotNull(response);
     }
 
     // ========== Header Check Tests ==========

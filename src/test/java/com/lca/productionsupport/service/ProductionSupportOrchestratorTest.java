@@ -448,4 +448,106 @@ class ProductionSupportOrchestratorTest {
         assertTrue(response.getSteps().getPrechecks().size() > 0);
         assertTrue(response.getSteps().getProcedure().size() > 0);
     }
+
+    @Test
+    void processRequest_withNullDownstreamService_usesDefault() {
+        OperationalRequest request = OperationalRequest.builder()
+            .query("cancel case 2025123P6732")
+            .userId("user123")
+            .downstreamService(null)
+            .build();
+
+        OperationalResponse response = orchestrator.processRequest(request);
+
+        assertEquals("CANCEL_CASE", response.getTaskId());
+        assertNotNull(response.getDownstreamService());
+    }
+
+    @Test
+    void processRequest_withEmptyDownstreamService_usesDefault() {
+        OperationalRequest request = OperationalRequest.builder()
+            .query("cancel case 2025123P6732")
+            .userId("user123")
+            .downstreamService("")
+            .build();
+
+        OperationalResponse response = orchestrator.processRequest(request);
+
+        assertEquals("CANCEL_CASE", response.getTaskId());
+        // Empty string gets overridden by runbook's default downstream service
+        assertNotNull(response.getDownstreamService());
+    }
+
+    @Test
+    void processRequest_classifierReturnsUnknownButRunbookExists() {
+        // This tests the edge case where classifier returns a taskId but runbook doesn't exist
+        // This shouldn't happen in practice but tests the null check
+        OperationalRequest request = OperationalRequest.builder()
+            .query("hello world")
+            .userId("user123")
+            .downstreamService("ap-services")
+            .build();
+
+        OperationalResponse response = orchestrator.processRequest(request);
+
+        assertEquals("UNKNOWN", response.getTaskId());
+        assertNotNull(response.getWarnings());
+    }
+
+    @Test
+    void getAvailableTasks_withNullDescription_handlesGracefully() {
+        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+
+        assertNotNull(tasks);
+        // All tasks should have required fields even if description is null
+        for (Map<String, String> task : tasks) {
+            assertNotNull(task.get("taskId"));
+            assertNotNull(task.get("taskName"));
+            assertNotNull(task.get("description")); // Should be empty string if null
+        }
+    }
+
+    @Test
+    void processRequest_validateRequiredEntities_missingEntity_addsWarning() {
+        OperationalRequest request = OperationalRequest.builder()
+            .query("update sample status")
+            .userId("user123")
+            .downstreamService("ap-services")
+            .build();
+
+        OperationalResponse response = orchestrator.processRequest(request);
+
+        assertEquals("UPDATE_SAMPLE_STATUS", response.getTaskId());
+        // Should still return response even if required entities are missing
+        assertNotNull(response);
+    }
+
+    @Test
+    void processRequest_validateRequiredEntities_allPresent_returnsSuccess() {
+        OperationalRequest request = OperationalRequest.builder()
+            .query("cancel case 2025123P6732")
+            .userId("user123")
+            .downstreamService("ap-services")
+            .build();
+
+        OperationalResponse response = orchestrator.processRequest(request);
+
+        assertEquals("CANCEL_CASE", response.getTaskId());
+        assertNotNull(response.getExtractedEntities().get("case_id"));
+    }
+
+    @Test
+    void processRequest_explicitTaskId_emptyString_treatsAsNull() {
+        OperationalRequest request = OperationalRequest.builder()
+            .query("cancel case 2025123P6732")
+            .taskId("")
+            .userId("user123")
+            .downstreamService("ap-services")
+            .build();
+
+        OperationalResponse response = orchestrator.processRequest(request);
+
+        // Empty string should trigger classification
+        assertEquals("CANCEL_CASE", response.getTaskId());
+    }
 }

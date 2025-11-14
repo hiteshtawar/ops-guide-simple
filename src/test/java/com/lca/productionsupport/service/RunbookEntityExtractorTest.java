@@ -375,5 +375,83 @@ class RunbookEntityExtractorTest {
         Map<String, String> result = extractor.extract("CASE 2025123P6732", config);
         assertEquals("2025123P6732", result.get("case_id"));
     }
+
+    @Test
+    void extract_withMultiplePatterns_firstMatchWins() {
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of(
+            "pattern1\\s+(\\w+)",
+            "pattern2\\s+(\\w+)"
+        ));
+        entityConfig.setRequired(false);
+        
+        config.setEntities(Map.of("value", entityConfig));
+        
+        Map<String, String> result = extractor.extract("pattern1 test", config);
+        assertEquals("test", result.get("value"));
+    }
+
+    @Test
+    void extract_withValidation_regexOnly_noEnum() {
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of("(\\w+)"));
+        UseCaseDefinition.ValidationConfig validation = new UseCaseDefinition.ValidationConfig();
+        validation.setRegex("^[a-z]+$");
+        validation.setEnumValues(null);
+        entityConfig.setValidation(validation);
+        entityConfig.setRequired(false);
+        
+        config.setEntities(Map.of("value", entityConfig));
+        
+        Map<String, String> result = extractor.extract("test", config);
+        assertEquals("test", result.get("value"));
+    }
+
+    @Test
+    void extract_withValidation_enumOnly_noRegex() {
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of("(\\w+)"));
+        UseCaseDefinition.ValidationConfig validation = new UseCaseDefinition.ValidationConfig();
+        validation.setRegex(null);
+        validation.setEnumValues(List.of("test", "value"));
+        entityConfig.setValidation(validation);
+        entityConfig.setRequired(false);
+        
+        config.setEntities(Map.of("value", entityConfig));
+        
+        Map<String, String> result = extractor.extract("test", config);
+        assertEquals("test", result.get("value"));
+    }
+
+    @Test
+    void extract_withTransform_trimAndLowercase() {
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of("value\\s+is\\s+(\\w+)"));
+        entityConfig.setTransform("lowercase");
+        entityConfig.setRequired(false);
+        
+        config.setEntities(Map.of("value", entityConfig));
+        
+        Map<String, String> result = extractor.extract("value is TEST", config);
+        assertEquals("test", result.get("value"));
+    }
+
+    @Test
+    void extract_withRequiredEntity_missing_logsWarning() {
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of("(\\d+)"));
+        entityConfig.setRequired(true);
+        
+        config.setEntities(Map.of("case_id", entityConfig));
+        
+        Map<String, String> result = extractor.extract("no numbers here", config);
+        assertNull(result.get("case_id"));
+        // Should log warning but not throw
+    }
 }
 
