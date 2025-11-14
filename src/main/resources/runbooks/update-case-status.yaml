@@ -1,0 +1,178 @@
+useCase:
+  id: "UPDATE_CASE_STATUS"
+  name: "Update Case Status"
+  description: "Update case status following business rules and workflow transitions"
+  category: "case-management"
+  version: "2.1"
+  downstreamService: "ap-services"
+
+classification:
+  keywords:
+    - "update status"
+    - "change status"
+    - "set status"
+    - "mark status"
+    - "status to"
+    - "update case status"
+  synonyms:
+    update: ["change", "modify", "set", "mark"]
+    status: ["state", "stage", "phase"]
+    case: ["specimen", "sample"]
+  requiredEntities:
+    - case_id
+    - status
+
+extraction:
+  entities:
+    case_id:
+      type: "string"
+      patterns:
+        - "(?:a\\s+|the\\s+)?case\\s+(\\d{4,}\\w+)" # Handles "a case", "the case", or "case"
+        - "caseid\\s+(\\d{4,}\\w+)"
+        - "case\\s+id\\s+(\\d{4,}\\w+)"
+        - "case\\s+number\\s+(\\d{4,}\\w+)"
+        - "(\\d{7}[A-Z]\\d{4})" # Format: 7 digits + letter + 4 digits (2025123P6732 or 2025123T6732)
+      required: true
+      validation:
+        regex: "^\\d{4,}\\w*$"
+        errorMessage: "Case ID must be in valid format"
+    
+    status:
+      type: "string"
+      patterns:
+        - "to\\s+(\\w+)"
+        - "status\\s+(\\w+)"
+        - "as\\s+(\\w+)"
+        - "mark\\s+status\\s+to\\s+(\\w+)"
+        - "set\\s+status\\s+to\\s+(\\w+)"
+      required: true
+      validation:
+        enumValues: 
+          - "pending"
+          - "accessioning"
+          - "grossing"
+          - "embedding"
+          - "cutting"
+          - "staining"
+          - "microscopy"
+          - "under_review"
+          - "completed"
+          - "on_hold"
+          - "cancelled"
+        errorMessage: "Status must be a valid workflow status"
+      transform: "lowercase"
+
+execution:
+  timeout: 30
+  retryPolicy:
+    maxAttempts: 3
+    backoffMs: 1000
+  
+  steps:
+    # ==================== PRECHECKS ====================
+    
+    - stepNumber: 1
+      stepType: "prechecks"
+      name: "Authorization Check"
+      description: "Verify user has appropriate role for status transition"
+      autoExecutable: true
+      method: "GET"
+      path: "/api/v1/users/current/roles/case_status_edit"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify user authorization"
+    
+    - stepNumber: 2
+      stepType: "prechecks"
+      name: "Status Transition Validation"
+      description: "Check if the status transition is valid"
+      autoExecutable: true
+      method: "GET"
+      path: "/api/v1/cases/{case_id}/valid-transitions"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "abort"
+        message: "Cannot validate status transition for case {case_id}"
+    
+    # ==================== PROCEDURE ====================
+    
+    - stepNumber: 3
+      stepType: "procedure"
+      name: "Execute Status Update"
+      description: "Update the case status"
+      autoExecutable: false
+      method: "PATCH"
+      path: "/api/v2/cases/{case_id}/status"
+      body:
+        status: "{status}"
+        reason: "operational_request"
+        notes: "Status updated via Production Support"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "abort"
+        message: "Failed to update status for case {case_id}"
+    
+    # ==================== POSTCHECKS ====================
+    
+    - stepNumber: 4
+      stepType: "postchecks"
+      name: "Verify Status Change"
+      description: "Confirm status was updated successfully"
+      autoExecutable: true
+      method: "GET"
+      path: "/api/v2/cases/{case_id}/status"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "alert"
+        message: "Status update verification failed for case {case_id}"
+    
+    - stepNumber: 5
+      stepType: "postchecks"
+      name: "Check Audit Trail"
+      description: "Verify status change event was recorded"
+      autoExecutable: true
+      method: "GET"
+      path: "/api/v2/cases/{case_id}/audit-log"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify audit log entry"
+    
+    - stepNumber: 6
+      stepType: "postchecks"
+      name: "Verify Downstream Updates"
+      description: "Check if downstream systems were notified"
+      autoExecutable: true
+      method: "GET"
+      path: "/api/v2/cases/{case_id}/notifications"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify downstream notifications"
+
+rollback:
+  enabled: true
+  steps:
+    - stepNumber: 1
+      name: "Restore Previous Status"
+      description: "Rollback to previous status"
+      method: "POST"
+      path: "/api/v2/cases/{case_id}/rollback"
+      body:
+        reason: "rollback_status_change"
+        restore_previous_state: true
+
+warnings:
+  - "Status updates may affect downstream processes"
+  - "Invalid transitions may break workflow integrity"
+  - "Ensure case is in a valid state before updating"
+
+metadata:
+  author: "ops-team"
+  lastModified: "2024-12-01"
+  tags: ["case-management", "status-update", "workflow"]
+

@@ -5,7 +5,6 @@ import com.lca.productionsupport.model.OperationalResponse;
 import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
 import com.lca.productionsupport.model.StepExecutionRequest;
 import com.lca.productionsupport.model.StepExecutionResponse;
-import com.lca.productionsupport.model.TaskType;
 import com.lca.productionsupport.service.ProductionSupportOrchestrator;
 import com.lca.productionsupport.service.StepExecutionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -106,7 +105,7 @@ public class ProductionSupportController {
         
         OperationalResponse response = orchestrator.processRequest(request);
         
-        if (TaskType.UNKNOWN.name().equals(response.getTaskId())) {
+        if ("UNKNOWN".equals(response.getTaskId())) {
             log.warn("Could not classify request: {}", request.getQuery());
         }
         

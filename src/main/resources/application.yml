@@ -12,6 +12,17 @@ downstream-services:
       base-url: https://localhost:8091
       timeout: 30
 
+# Dynamic Runbook Configuration
+runbook:
+  # Enable/disable dynamic YAML runbooks
+  enabled: true
+  # Location of YAML runbook files
+  location: classpath:runbooks/
+  # Hot reload settings (development only)
+  hot-reload:
+    enabled: false
+    interval: 60
+
 # Logging
 logging:
   level:

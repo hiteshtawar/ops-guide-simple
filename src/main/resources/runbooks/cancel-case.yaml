@@ -1,0 +1,126 @@
+useCase:
+  id: "CANCEL_CASE"
+  name: "Cancel Case"
+  description: "Complete cancellation of a case including cleanup of associated workflows"
+  category: "case-management"
+  version: "3.1"
+  downstreamService: "ap-services"
+
+classification:
+  keywords:
+    - "cancel case"
+    - "delete case"
+    - "abort case"
+    - "remove case"
+    - "cancel"
+    - "cancellation" 
+    - "cancel a case"
+  synonyms:
+    cancel: ["delete", "abort", "remove", "terminate", "cancellation", "cancel a case"]
+    case: ["a case", "the case", "case"]
+  requiredEntities:
+    - case_id
+
+extraction:
+  entities:
+    case_id:
+      type: "string"
+      patterns:
+        - "(?:a\\s+|the\\s+)?case\\s+(\\d{4,}\\w+)" # Handles "a case", "the case", or "case"
+        - "caseid\\s+(\\d{4,}\\w+)"
+        - "case\\s+id\\s+(\\d{4,}\\w+)"
+        - "case\\s+number\\s+(\\d{4,}\\w+)"
+        - "(\\d{7}[A-Z]\\d{4})" # Format: 7 digits + letter + 4 digits (2025123P6732 or 2025123T6732)
+      required: true
+      validation:
+        regex: "^\\d{4,}\\w*$"
+        errorMessage: "Case ID must be in format: 2025123P6732"
+
+execution:
+  timeout: 30
+  retryPolicy:
+    maxAttempts: 3
+    backoffMs: 1000
+  
+  steps:
+    # ==================== PRECHECKS ====================
+    
+    - stepNumber: 1
+      stepType: "prechecks"
+      name: "Verify User Has Cancel Permission"
+      description: "Check if user has Production Support role"
+      autoExecutable: true
+      method: "HEADER_CHECK"
+      path: "Role-Name"
+      expectedResponse: "Production Support"
+      errorHandling:
+        onFailure: "abort"
+        message: "User does not have required role for cancellation"
+    
+    - stepNumber: 2
+      stepType: "prechecks"
+      name: "Preview Cancellation Impact"
+      description: "Display impact message to user"
+      autoExecutable: true
+      method: "LOCAL_MESSAGE"
+      localMessage: "Case and it's materials will be canceled and removed from the workpool"
+      errorHandling:
+        onFailure: "continue"
+    
+    # ==================== PROCEDURE ====================
+    
+    - stepNumber: 3
+      stepType: "procedure"
+      name: "Execute Case Cancellation"
+      description: "Cancel the case in the system"
+      autoExecutable: false
+      method: "PATCH"
+      path: "/lims-api/case/{case_id}/cancel"
+      body:
+        reason: "operational_request"
+        notes: "Cancelled via Production Support"
+        notify_stakeholders: true
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "abort"
+        message: "Failed to cancel case {case_id}"
+    
+    # ==================== POSTCHECKS ====================
+    
+    - stepNumber: 4
+      stepType: "postchecks"
+      name: "Verify Case Status Updated to Cancelled"
+      description: "Confirm case status is now cancelled"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/case/{case_id}/status"
+      expectedStatus: 200
+      expectedResponse: "cancelled"
+      errorHandling:
+        onFailure: "alert"
+        message: "Case cancellation verification failed for {case_id}"
+    
+    - stepNumber: 5
+      stepType: "postchecks"
+      name: "Verify Audit Log Entry Created"
+      description: "Check audit log for cancellation event"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/case/{case_id}/audit-log"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify audit log"
+
+rollback:
+  enabled: false
+
+warnings:
+  - "Case cancellation is a critical operation. Please review pre-checks carefully."
+
+metadata:
+  author: "Connect Lims Team"
+  lastModified: "2024-12-01"
+  tags: ["case-management", "cancellation", "critical"]
+

@@ -1,10 +1,8 @@
 package com.lca.productionsupport.service;
 
+import com.lca.productionsupport.model.UseCaseDefinition;
 import com.lca.productionsupport.model.OperationalRequest;
 import com.lca.productionsupport.model.OperationalResponse;
-import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
-import com.lca.productionsupport.model.TaskType;
-import com.lca.productionsupport.service.PatternClassifier.ClassificationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,14 +13,17 @@ import java.util.Map;
 
 /**
  * Main orchestrator that coordinates classification and runbook retrieval
+ * Purely YAML-driven - no hardcoded logic
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductionSupportOrchestrator {
 
-    private final PatternClassifier patternClassifier;
-    private final RunbookParser runbookParser;
+    private final RunbookRegistry runbookRegistry;
+    private final RunbookClassifier runbookClassifier;
+    private final RunbookEntityExtractor entityExtractor;
+    private final RunbookAdapter runbookAdapter;
     
     /**
      * Process an operational request and return next steps
@@ -32,39 +33,87 @@ public class ProductionSupportOrchestrator {
                 request.getQuery(), request.getDownstreamService());
         
         // Step 1: Classify the request (or use explicit taskId if provided)
-        TaskType taskType;
-        Map<String, String> entities;
+        String taskId;
+        UseCaseDefinition useCase;
         
         if (request.getTaskId() != null && !request.getTaskId().isEmpty()) {
             // Explicit task ID provided
-            taskType = TaskType.fromString(request.getTaskId());
-            // Still need to extract entities
-            ClassificationResult classification = patternClassifier.classify(request.getQuery());
-            entities = classification.getEntities();
+            taskId = request.getTaskId();
+            useCase = runbookRegistry.getUseCase(taskId);
+            
+            if (useCase == null) {
+                log.warn("No runbook found for explicit taskId: {}", taskId);
+                return buildUnknownResponse(request);
+            }
         } else {
-            // Classify using pattern matching
-            ClassificationResult classification = patternClassifier.classify(request.getQuery());
-            taskType = classification.getTaskType();
-            entities = classification.getEntities();
+            // Classify using runbook classifier
+            taskId = runbookClassifier.classify(request.getQuery());
+            
+            if ("UNKNOWN".equals(taskId)) {
+                log.warn("Could not classify request: {}", request.getQuery());
+                return buildUnknownResponse(request);
+            }
+            
+            useCase = runbookRegistry.getUseCase(taskId);
+            
+            if (useCase == null) {
+                log.warn("Classifier returned {}, but no runbook found", taskId);
+                return buildUnknownResponse(request);
+            }
         }
         
-        // Step 2: Get runbook steps for the classified task
-        List<RunbookStep> allSteps = runbookParser.getSteps(taskType.name(), null);
+        // Step 2: Extract entities
+        Map<String, String> entities = entityExtractor.extract(
+            request.getQuery(),
+            useCase.getExtraction()
+        );
         
-        // Step 3: Group steps by type
-        OperationalResponse.StepGroups stepGroups = groupStepsByType(allSteps);
+        // Step 3: Validate required entities
+        if (!validateRequiredEntities(useCase, entities)) {
+            log.warn("Required entities not found for use case: {}", taskId);
+            // Still return response with warnings
+        }
         
-        // Step 4: Build warnings
-        List<String> warnings = buildWarnings(taskType, entities);
+        // Step 4: Convert to OperationalResponse
+        OperationalResponse response = runbookAdapter.toOperationalResponse(useCase, entities);
         
-        // Step 5: Build response
+        // Override downstream service if specified in request
+        if (request.getDownstreamService() != null && !request.getDownstreamService().isEmpty()) {
+            response.setDownstreamService(request.getDownstreamService());
+        }
+        
+        return response;
+    }
+    
+    /**
+     * Validate that all required entities are present
+     */
+    private boolean validateRequiredEntities(UseCaseDefinition useCase, Map<String, String> entities) {
+        if (useCase.getClassification() == null || 
+            useCase.getClassification().getRequiredEntities() == null) {
+            return true;
+        }
+        
+        for (String requiredEntity : useCase.getClassification().getRequiredEntities()) {
+            if (!entities.containsKey(requiredEntity) || entities.get(requiredEntity) == null) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Build response for unknown/unclassified requests
+     */
+    private OperationalResponse buildUnknownResponse(OperationalRequest request) {
         return OperationalResponse.builder()
-            .taskId(taskType.name())
-            .taskName(taskType.getDisplayName())
+            .taskId("UNKNOWN")
+            .taskName("Unknown")
             .downstreamService(request.getDownstreamService())
-            .extractedEntities(entities)
-            .steps(stepGroups)
-            .warnings(warnings)
+            .extractedEntities(Map.of())
+            .steps(OperationalResponse.StepGroups.builder().build())
+            .warnings(List.of("Unable to classify the request. Please try rephrasing or select a task manually."))
             .build();
     }
     
@@ -75,76 +124,17 @@ public class ProductionSupportOrchestrator {
     public List<Map<String, String>> getAvailableTasks() {
         List<Map<String, String>> tasks = new ArrayList<>();
         
-        for (TaskType taskType : TaskType.values()) {
-            if (taskType != TaskType.UNKNOWN) {
-                Map<String, String> task = Map.of(
-                    "taskId", taskType.name(),
-                    "taskName", taskType.getDisplayName(),
-                    "description", getTaskDescription(taskType)
-                );
-                tasks.add(task);
-            }
+        // Add all runbooks from registry
+        for (UseCaseDefinition useCase : runbookRegistry.getAllUseCases()) {
+            Map<String, String> task = Map.of(
+                "taskId", useCase.getUseCase().getId(),
+                "taskName", useCase.getUseCase().getName(),
+                "description", useCase.getUseCase().getDescription() != null ? 
+                    useCase.getUseCase().getDescription() : ""
+            );
+            tasks.add(task);
         }
         
         return tasks;
     }
-    
-    /**
-     * Get description for each task type
-     */
-    private String getTaskDescription(TaskType taskType) {
-        return switch (taskType) {
-            case CANCEL_CASE -> "Cancel a pathology case. Type: cancel case 2025P1234 and hit Send";
-            case UPDATE_CASE_STATUS -> "Update case workflow status. Type: update case status to pending 2025P1234 and hit Send";
-            default -> "Unknown task type";
-        };
-    }
-    
-    /**
-     * Group steps by their type
-     */
-    private OperationalResponse.StepGroups groupStepsByType(List<RunbookStep> allSteps) {
-        List<RunbookStep> prechecks = new ArrayList<>();
-        List<RunbookStep> procedure = new ArrayList<>();
-        List<RunbookStep> postchecks = new ArrayList<>();
-        List<RunbookStep> rollback = new ArrayList<>();
-        
-        for (RunbookStep step : allSteps) {
-            switch (step.getStepType().toLowerCase()) {
-                case "precheck" -> prechecks.add(step);
-                case "procedure" -> procedure.add(step);
-                case "postcheck" -> postchecks.add(step);
-                case "rollback" -> rollback.add(step);
-            }
-        }
-        
-        return OperationalResponse.StepGroups.builder()
-            .prechecks(prechecks.isEmpty() ? null : prechecks)
-            .procedure(procedure.isEmpty() ? null : procedure)
-            .postchecks(postchecks.isEmpty() ? null : postchecks)
-            .rollback(rollback.isEmpty() ? null : rollback)
-            .build();
-    }
-    
-    /**
-     * Build warnings based on extracted entities and task
-     */
-    private List<String> buildWarnings(TaskType taskType, Map<String, String> entities) {
-        List<String> warnings = new ArrayList<>();
-        
-        if (!entities.containsKey("case_id")) {
-            warnings.add("No case ID found in query. You'll need to provide it manually.");
-        }
-        
-        if (taskType == TaskType.UPDATE_CASE_STATUS && !entities.containsKey("status")) {
-            warnings.add("No target status found in query. You'll need to provide it manually.");
-        }
-        
-        if (taskType == TaskType.CANCEL_CASE) {
-            warnings.add("Case cancellation is a critical operation. Please review pre-checks carefully.");
-        }
-        
-        return warnings;
-    }
 }
-

@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class StepExecutionServiceTest {
 
     private StepExecutionService stepExecutionService;
-    private RunbookParser runbookParser;
+    private RunbookRegistry runbookRegistry;
+    private RunbookAdapter runbookAdapter;
     private WebClientRegistry webClientRegistry;
     private DownstreamServiceProperties serviceProperties;
 
@@ -34,11 +35,34 @@ class StepExecutionServiceTest {
         services.put("ap-services", config);
         serviceProperties.setServices(services);
         
-        // Create registry and parser
+        // Create registry and adapter
         webClientRegistry = new WebClientRegistry(serviceProperties);
-        runbookParser = new RunbookParser();
+        runbookRegistry = new TestRunbookRegistry();
+        runbookAdapter = new RunbookAdapter();
         
-        stepExecutionService = new StepExecutionService(webClientRegistry, runbookParser);
+        stepExecutionService = new StepExecutionService(webClientRegistry, runbookRegistry, runbookAdapter);
+    }
+    
+    // Test-specific runbook registry that loads YAMLs properly
+    private static class TestRunbookRegistry extends RunbookRegistry {
+        public TestRunbookRegistry() {
+            super();
+            // Trigger loading with classpath location
+            try {
+                var locationField = RunbookRegistry.class.getDeclaredField("runbookLocation");
+                locationField.setAccessible(true);
+                locationField.set(this, "classpath:runbooks/");
+                
+                var enabledField = RunbookRegistry.class.getDeclaredField("enabled");
+                enabledField.setAccessible(true);
+                enabledField.set(this, true);
+                
+                // Call loadRunbooks
+                loadRunbooks();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to initialize test registry", e);
+            }
+        }
     }
 
     // ========== Error Handling Tests (No HTTP needed) ==========

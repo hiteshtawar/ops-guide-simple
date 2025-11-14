@@ -64,6 +64,13 @@
             <version>2.3.0</version>
         </dependency>
 
+        <!-- YAML Parsing for Dynamic Runbooks -->
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>2.0</version>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -2,9 +2,11 @@ package com.lca.productionsupport.service;
 
 import com.lca.productionsupport.config.WebClientRegistry;
 import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
+import com.lca.productionsupport.model.OperationalResponse.StepGroups;
 import com.lca.productionsupport.model.StepExecutionRequest;
 import com.lca.productionsupport.model.StepExecutionResponse;
 import com.lca.productionsupport.model.StepMethod;
+import com.lca.productionsupport.model.UseCaseDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,6 +16,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,7 +31,8 @@ import java.util.UUID;
 public class StepExecutionService {
 
     private final WebClientRegistry webClientRegistry;
-    private final RunbookParser runbookParser;
+    private final RunbookRegistry runbookRegistry;
+    private final RunbookAdapter runbookAdapter;
     
     /**
      * Execute a specific step
@@ -34,10 +40,11 @@ public class StepExecutionService {
     public StepExecutionResponse executeStep(StepExecutionRequest request) {
         long startTime = System.currentTimeMillis();
         
-        // Get the step definition from runbook
-        RunbookStep step = runbookParser.getStep(request.getTaskId(), request.getStepNumber());
+        // Get the step definition from YAML runbook
+        RunbookStep step = getStepFromRunbook(request.getTaskId(), request.getStepNumber(), request.getEntities());
         
         if (step == null) {
+            log.warn("Step not found for taskId: {}, stepNumber: {}", request.getTaskId(), request.getStepNumber());
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
@@ -46,10 +53,14 @@ public class StepExecutionService {
                 .build();
         }
         
+        log.info("Retrieved step {}: method={}, stepType={}, description={}", 
+            step.getStepNumber(), step.getMethod(), step.getStepType(), step.getDescription());
+        
         StepMethod method = step.getMethod();
         
         // Check if this is a local execution step (no downstream service needed)
         if (method != null && method.isLocalExecution()) {
+            log.info("Executing local step: {}", method);
             if (method == StepMethod.LOCAL_MESSAGE) {
                 return executeLocalMessage(request, step, startTime);
             } else if (method == StepMethod.HEADER_CHECK) {
@@ -144,7 +155,7 @@ public class StepExecutionService {
      */
     private StepExecutionResponse executeHeaderCheck(StepExecutionRequest request, RunbookStep step, long startTime) {
         String headerName = step.getPath();  // Header name stored in path field
-        String expectedValue = step.getRequestBody();  // Expected value stored in requestBody field
+        String expectedValue = step.getExpectedResponse();  // Expected value stored in expectedResponse field
         String actualValue = request.getUserRole();  // Get the actual role from request
         
         log.info("Executing header check: header={}, expected={}, actual={}", 
@@ -260,6 +271,41 @@ public class StepExecutionService {
         }
         
         return resolved;
+    }
+    
+    /**
+     * Get a specific step from YAML runbook
+     */
+    private RunbookStep getStepFromRunbook(String taskId, Integer stepNumber, Map<String, String> entities) {
+        // Handle null taskId
+        if (taskId == null) {
+            log.warn("TaskId is null, cannot retrieve step");
+            return null;
+        }
+        
+        // Get use case definition
+        UseCaseDefinition useCase = runbookRegistry.getUseCase(taskId);
+        if (useCase == null) {
+            log.warn("No runbook found for taskId: {}", taskId);
+            return null;
+        }
+        
+        // Convert to operational response to get steps
+        Map<String, String> safeEntities = entities != null ? entities : new HashMap<>();
+        var response = runbookAdapter.toOperationalResponse(useCase, safeEntities);
+        StepGroups stepGroups = response.getSteps();
+        
+        // Find the step by number
+        List<RunbookStep> allSteps = new ArrayList<>();
+        if (stepGroups.getPrechecks() != null) allSteps.addAll(stepGroups.getPrechecks());
+        if (stepGroups.getProcedure() != null) allSteps.addAll(stepGroups.getProcedure());
+        if (stepGroups.getPostchecks() != null) allSteps.addAll(stepGroups.getPostchecks());
+        if (stepGroups.getRollback() != null) allSteps.addAll(stepGroups.getRollback());
+        
+        return allSteps.stream()
+            .filter(s -> s.getStepNumber().equals(stepNumber))
+            .findFirst()
+            .orElse(null);
     }
 }
 
