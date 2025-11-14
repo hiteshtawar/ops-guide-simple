@@ -91,7 +91,7 @@ class ProductionSupportOrchestratorTest {
     @Test
     void processRequest_updateStatus_withCaseIdAndStatus() {
         OperationalRequest request = OperationalRequest.builder()
-            .query("update sample status to Completed - Microtomy for sample 550e8400-e29b-41d4-a716-446655440000")
+            .query("update sample status to Completed - Microtomy for sample BC123456")
             .userId("user123")
             .downstreamService("ap-services")
             .build();
@@ -108,7 +108,7 @@ class ProductionSupportOrchestratorTest {
     @Test
     void processRequest_updateStatus_withoutStatus() {
         OperationalRequest request = OperationalRequest.builder()
-            .query("update sample status for sample 550e8400-e29b-41d4-a716-446655440000")
+            .query("update sample status for sample BC123456")
             .userId("user123")
             .downstreamService("ap-services")
             .build();
@@ -179,7 +179,7 @@ class ProductionSupportOrchestratorTest {
     @Test
     void processRequest_withExplicitTaskId_updateStatus() {
         OperationalRequest request = OperationalRequest.builder()
-            .query("sample 550e8400-e29b-41d4-a716-446655440000 status Completed - Microtomy")
+            .query("sample BC123456 status Completed - Microtomy")
             .taskId("UPDATE_SAMPLE_STATUS")
             .userId("user123")
             .downstreamService("ap-services")
@@ -430,7 +430,7 @@ class ProductionSupportOrchestratorTest {
     @Test
     void processRequest_endToEnd_updateStatus() {
         OperationalRequest request = OperationalRequest.builder()
-            .query("update sample status to Completed - Microtomy for sample 550e8400-e29b-41d4-a716-446655440000")
+            .query("update sample status to Completed - Microtomy for sample BC123456")
             .userId("pathologist@example.com")
             .downstreamService("ap-services")
             .build();

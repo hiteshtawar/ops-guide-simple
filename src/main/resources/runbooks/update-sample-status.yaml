@@ -21,22 +21,22 @@ classification:
     status: ["state"]
     sample: ["slide", "container", "block", "specimen"]
   requiredEntities:
-    - sampleId
+    - barcode
     - sampleStatus
 
 extraction:
   entities:
-    sampleId:
+    barcode:
       type: "string"
       patterns:
-        - "(?:sample|slide|container|block)\\s+(?:id\\s+)?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})" # UUID format
-        - "(?:sample|slide|container|block)\\s+(?:id\\s+)?([0-9a-fA-F]{32})" # UUID without hyphens
-        - "sampleid\\s+([0-9a-fA-F-]{36})"
-        - "sample\\s+id\\s+([0-9a-fA-F-]{36})"
+        - "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Z0-9]{4,20})" # Alphanumeric barcode
+        - "barcode\\s+([A-Z0-9]{4,20})"
+        - "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Z0-9]{4,20})" # "for sample BC123456"
+        - "([A-Z0-9]{4,20})" # Standalone barcode
       required: true
       validation:
-        regex: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$|^[0-9a-fA-F]{32}$"
-        errorMessage: "Sample ID must be a valid UUID"
+        regex: "^[A-Z0-9]{4,20}$"
+        errorMessage: "Barcode must be alphanumeric (4-20 characters)"
     
     sampleStatus:
       type: "string"
@@ -135,13 +135,13 @@ execution:
       description: "Update the sample status in the system"
       autoExecutable: false
       method: "PATCH"
-      path: "/lims-api/samples/{sampleId}/status"
+      path: "/lims-api/samples/{barcode}/status"
       body:
         sampleStatus: "{sampleStatus}"
       expectedStatus: 200
       errorHandling:
         onFailure: "abort"
-        message: "Failed to update sample status for {sampleId}"
+        message: "Failed to update sample status for {barcode}"
     
     # ==================== POSTCHECKS ====================
     
@@ -151,12 +151,12 @@ execution:
       description: "Confirm sample status is now {sampleStatus}"
       autoExecutable: true
       method: "GET"
-      path: "/lims-api/samples/{sampleId}/status"
+      path: "/lims-api/samples/{barcode}/status"
       expectedStatus: 200
       expectedResponse: "{sampleStatus}"
       errorHandling:
         onFailure: "alert"
-        message: "Sample status verification failed for {sampleId}"
+        message: "Sample status verification failed for {barcode}"
     
     - stepNumber: 5
       stepType: "postchecks"
@@ -164,7 +164,7 @@ execution:
       description: "Check audit log for status update event"
       autoExecutable: true
       method: "GET"
-      path: "/lims-api/samples/{sampleId}/audit-log"
+      path: "/lims-api/samples/{barcode}/audit-log"
       expectedStatus: 200
       optional: true
       errorHandling:

@@ -202,7 +202,7 @@ class StepExecutionServiceTest {
     @Test
     void executeStep_withMultipleEntities_acceptsRequest() {
         Map<String, String> entities = new HashMap<>();
-        entities.put("sampleId", "550e8400-e29b-41d4-a716-446655440000");
+        entities.put("barcode", "BC123456");
         entities.put("user_id", "user123");
         entities.put("sampleStatus", "Completed - Microtomy");
         entities.put("reason", "test");
@@ -322,7 +322,7 @@ class StepExecutionServiceTest {
             .taskId("UPDATE_SAMPLE_STATUS")
             .downstreamService("ap-services")
             .stepNumber(1)
-            .entities(Map.of("sampleId", "550e8400-e29b-41d4-a716-446655440000", "user_id", "user123", "sampleStatus", "Completed - Microtomy"))
+            .entities(Map.of("barcode", "BC123456", "user_id", "user123", "sampleStatus", "Completed - Microtomy"))
             .userId("user123")
             .authToken("token")
             .build();

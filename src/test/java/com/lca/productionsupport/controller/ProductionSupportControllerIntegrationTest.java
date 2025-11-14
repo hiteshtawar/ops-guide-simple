@@ -73,7 +73,7 @@ class ProductionSupportControllerIntegrationTest {
     @Test
     void processRequest_updateStatus_returnsResponse() throws Exception {
         OperationalRequest request = OperationalRequest.builder()
-            .query("update sample status to Completed - Microtomy sample 550e8400-e29b-41d4-a716-446655440000")
+            .query("update sample status to Completed - Microtomy sample BC123456")
             .userId("user123")
             .downstreamService("ap-services")
             .build();
