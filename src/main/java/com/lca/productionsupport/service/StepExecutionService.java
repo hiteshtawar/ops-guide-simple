@@ -90,6 +90,9 @@ public class StepExecutionService {
         String resolvedBody = step.getRequestBody() != null ? 
             resolvePlaceholders(step.getRequestBody(), request.getEntities()) : null;
         
+        // Merge headers: YAML headers (with placeholders resolved) + request headers (request takes precedence)
+        Map<String, String> mergedHeaders = mergeHeaders(step.getHeaders(), request);
+        
         try {
             // Get timeout for this service
             Duration timeout = webClientRegistry.getTimeout(request.getDownstreamService());
@@ -102,7 +105,7 @@ public class StepExecutionService {
                 resolvedBody,
                 request.getAuthToken(),
                 request.getUserId(),
-                request.getCustomHeaders(),
+                mergedHeaders,
                 timeout
             );
             
@@ -230,13 +233,26 @@ public class StepExecutionService {
                 throw new IllegalArgumentException("Unsupported HTTP method: " + method);
         }
         
-        // Add standard headers
-        request = request
-            .header("Authorization", "Bearer " + (authToken != null ? authToken : "dummy-token"))
-            .header("X-User-ID", userId != null ? userId : "system")
-            .header("X-Idempotency-Key", UUID.randomUUID().toString());
+        // Add standard headers only if not already present in customHeaders
+        // This allows YAML headers to override defaults
+        if (customHeaders == null || !customHeaders.containsKey("Authorization")) {
+            String authHeaderValue = authToken != null ? authToken : "dummy-token";
+            // Add "Bearer " prefix if not already present
+            if (!authHeaderValue.startsWith("Bearer ")) {
+                authHeaderValue = "Bearer " + authHeaderValue;
+            }
+            request = request.header("Authorization", authHeaderValue);
+        }
         
-        // Add custom headers from API Gateway (Api-User, Lab-Id, Discipline-Name, Time-Zone, Role-Name, accept, etc.)
+        if (customHeaders == null || !customHeaders.containsKey("X-User-ID")) {
+            request = request.header("X-User-ID", userId != null ? userId : "system");
+        }
+        
+        if (customHeaders == null || !customHeaders.containsKey("X-Idempotency-Key")) {
+            request = request.header("X-Idempotency-Key", UUID.randomUUID().toString());
+        }
+        
+        // Add all custom headers (from YAML or request, already merged)
         if (customHeaders != null) {
             for (Map.Entry<String, String> header : customHeaders.entrySet()) {
                 request = request.header(header.getKey(), header.getValue());
@@ -268,6 +284,71 @@ public class StepExecutionService {
         for (java.util.Map.Entry<String, String> entry : entities.entrySet()) {
             String placeholder = "{" + entry.getKey() + "}";
             resolved = resolved.replace(placeholder, entry.getValue());
+        }
+        
+        return resolved;
+    }
+    
+    /**
+     * Merge YAML headers with request headers, resolving placeholders from request context
+     * Request headers take precedence over YAML headers
+     */
+    private Map<String, String> mergeHeaders(Map<String, String> yamlHeaders, StepExecutionRequest request) {
+        Map<String, String> merged = new HashMap<>();
+        
+        // First, add YAML headers with placeholders resolved from request context
+        if (yamlHeaders != null && !yamlHeaders.isEmpty()) {
+            for (Map.Entry<String, String> entry : yamlHeaders.entrySet()) {
+                String headerValue = resolveHeaderPlaceholders(entry.getValue(), request);
+                merged.put(entry.getKey(), headerValue);
+            }
+        }
+        
+        // Then, add/override with headers from request (request headers take precedence)
+        if (request.getCustomHeaders() != null) {
+            merged.putAll(request.getCustomHeaders());
+        }
+        
+        return merged;
+    }
+    
+    /**
+     * Resolve placeholders in header values from request context
+     * Supports: {api_user}, {lab_id}, {discipline_name}, {time_zone}, {role_name}, {token}, {user_id}, {IDEMPOTENCY_KEY}
+     */
+    private String resolveHeaderPlaceholders(String template, StepExecutionRequest request) {
+        if (template == null) {
+            return template;
+        }
+        
+        String resolved = template;
+        Map<String, String> customHeaders = request.getCustomHeaders();
+        
+        // Resolve from custom headers (request headers)
+        if (customHeaders != null) {
+            resolved = resolved.replace("{api_user}", customHeaders.getOrDefault("Api-User", "{api_user}"));
+            resolved = resolved.replace("{lab_id}", customHeaders.getOrDefault("Lab-Id", "{lab_id}"));
+            resolved = resolved.replace("{discipline_name}", customHeaders.getOrDefault("Discipline-Name", "{discipline_name}"));
+            resolved = resolved.replace("{time_zone}", customHeaders.getOrDefault("Time-Zone", "{time_zone}"));
+            resolved = resolved.replace("{role_name}", customHeaders.getOrDefault("Role-Name", "{role_name}"));
+        }
+        
+        // Resolve from request body fields
+        if (request.getAuthToken() != null) {
+            // Remove "Bearer " prefix if present
+            String token = request.getAuthToken().startsWith("Bearer ") 
+                ? request.getAuthToken().substring(7) 
+                : request.getAuthToken();
+            resolved = resolved.replace("{token}", token);
+        }
+        
+        if (request.getUserId() != null) {
+            resolved = resolved.replace("{user_id}", request.getUserId());
+        }
+        
+        // Generate idempotency key if needed
+        if (resolved.contains("{IDEMPOTENCY_KEY}")) {
+            resolved = resolved.replace("{IDEMPOTENCY_KEY}", UUID.randomUUID().toString());
         }
         
         return resolved;

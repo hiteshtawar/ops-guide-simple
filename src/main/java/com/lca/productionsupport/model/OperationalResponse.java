@@ -102,6 +102,11 @@ public class OperationalResponse {
          * Step type: precheck, procedure, postcheck, rollback
          */
         private String stepType;
+        
+        /**
+         * Headers to include in the HTTP request (from YAML definition)
+         */
+        private Map<String, String> headers;
     }
 }
 

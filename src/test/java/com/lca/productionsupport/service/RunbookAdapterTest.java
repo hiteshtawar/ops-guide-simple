@@ -618,6 +618,157 @@ class RunbookAdapterTest {
         assertEquals("Update BC123456 to Completed", stepResult.getDescription());
     }
 
+    // ========== Header Tests ==========
+
+    @Test
+    void toOperationalResponse_withHeaders_readsHeadersFromYaml() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("PATCH");
+        step.setPath("/api/cases/{case_id}");
+        step.setStepType("procedure");
+        
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+        headers.put("Api-User", "{api_user}");
+        headers.put("Authorization", "Bearer {token}");
+        step.setHeaders(headers);
+        
+        useCase.getExecution().getSteps().add(step);
+        
+        Map<String, String> entities = Map.of("case_id", "2025123P6732");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep stepResult = response.getSteps().getProcedure().get(0);
+        assertNotNull(stepResult.getHeaders());
+        assertEquals("application/json", stepResult.getHeaders().get("Content-Type"));
+        assertEquals("{api_user}", stepResult.getHeaders().get("Api-User")); // Placeholder not resolved yet
+        assertEquals("Bearer {token}", stepResult.getHeaders().get("Authorization")); // Placeholder not resolved yet
+    }
+
+    @Test
+    void toOperationalResponse_withHeaders_resolvesEntityPlaceholders() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("GET");
+        step.setPath("/api/cases/{case_id}");
+        step.setStepType("procedure");
+        
+        Map<String, String> headers = new HashMap<>();
+        headers.put("X-Case-Id", "{case_id}");
+        headers.put("X-Status", "active");
+        step.setHeaders(headers);
+        
+        useCase.getExecution().getSteps().add(step);
+        
+        Map<String, String> entities = Map.of("case_id", "2025123P6732");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep stepResult = response.getSteps().getProcedure().get(0);
+        assertNotNull(stepResult.getHeaders());
+        assertEquals("2025123P6732", stepResult.getHeaders().get("X-Case-Id")); // Entity placeholder resolved
+        assertEquals("active", stepResult.getHeaders().get("X-Status")); // No placeholder
+    }
+
+    @Test
+    void toOperationalResponse_withHeaders_keepsRequestContextPlaceholders() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("POST");
+        step.setPath("/api/cases");
+        step.setStepType("procedure");
+        
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Api-User", "{api_user}");
+        headers.put("Lab-Id", "{lab_id}");
+        headers.put("Authorization", "Bearer {token}");
+        headers.put("X-User-ID", "{user_id}");
+        headers.put("X-Idempotency-Key", "{IDEMPOTENCY_KEY}");
+        step.setHeaders(headers);
+        
+        useCase.getExecution().getSteps().add(step);
+        
+        Map<String, String> entities = new HashMap<>();
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep stepResult = response.getSteps().getProcedure().get(0);
+        assertNotNull(stepResult.getHeaders());
+        // Request context placeholders should remain unresolved (will be resolved later in StepExecutionService)
+        assertEquals("{api_user}", stepResult.getHeaders().get("Api-User"));
+        assertEquals("{lab_id}", stepResult.getHeaders().get("Lab-Id"));
+        assertEquals("Bearer {token}", stepResult.getHeaders().get("Authorization"));
+        assertEquals("{user_id}", stepResult.getHeaders().get("X-User-ID"));
+        assertEquals("{IDEMPOTENCY_KEY}", stepResult.getHeaders().get("X-Idempotency-Key"));
+    }
+
+    @Test
+    void toOperationalResponse_withoutHeaders_returnsNullHeaders() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("GET");
+        step.setPath("/api/cases/{case_id}");
+        step.setStepType("procedure");
+        // No headers set
+        useCase.getExecution().getSteps().add(step);
+        
+        Map<String, String> entities = Map.of("case_id", "2025123P6732");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep stepResult = response.getSteps().getProcedure().get(0);
+        assertNull(stepResult.getHeaders());
+    }
+
+    @Test
+    void toOperationalResponse_withEmptyHeaders_returnsNull() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("GET");
+        step.setPath("/api/cases/{case_id}");
+        step.setStepType("procedure");
+        step.setHeaders(new HashMap<>()); // Empty headers
+        useCase.getExecution().getSteps().add(step);
+        
+        Map<String, String> entities = Map.of("case_id", "2025123P6732");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep stepResult = response.getSteps().getProcedure().get(0);
+        assertNull(stepResult.getHeaders()); // Empty headers should result in null
+    }
+
+    @Test
+    void toOperationalResponse_withHeaders_mixedPlaceholders() {
+        UseCaseDefinition useCase = createBasicUseCase();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("PATCH");
+        step.setPath("/api/cases/{case_id}/cancel");
+        step.setStepType("procedure");
+        
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+        headers.put("X-Case-Id", "{case_id}"); // Entity placeholder
+        headers.put("Api-User", "{api_user}"); // Request context placeholder
+        headers.put("Authorization", "Bearer {token}"); // Request context placeholder
+        step.setHeaders(headers);
+        
+        useCase.getExecution().getSteps().add(step);
+        
+        Map<String, String> entities = Map.of("case_id", "2025123P6732");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+        
+        OperationalResponse.RunbookStep stepResult = response.getSteps().getProcedure().get(0);
+        assertNotNull(stepResult.getHeaders());
+        assertEquals("application/json", stepResult.getHeaders().get("Content-Type"));
+        assertEquals("2025123P6732", stepResult.getHeaders().get("X-Case-Id")); // Resolved
+        assertEquals("{api_user}", stepResult.getHeaders().get("Api-User")); // Not resolved yet
+        assertEquals("Bearer {token}", stepResult.getHeaders().get("Authorization")); // Not resolved yet
+    }
+
     // Helper method to create a basic use case for testing
     private UseCaseDefinition createBasicUseCase() {
         UseCaseDefinition useCase = new UseCaseDefinition();

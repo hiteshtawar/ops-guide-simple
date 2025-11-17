@@ -128,6 +128,18 @@ public class RunbookAdapter {
         }
         
         // Handle regular HTTP method steps
+        // Keep headers from YAML as-is (placeholders will be resolved later from request context)
+        // Only resolve entity placeholders (like {case_id}) but keep request context placeholders (like {api_user})
+        Map<String, String> processedHeaders = null;
+        if (step.getHeaders() != null && !step.getHeaders().isEmpty()) {
+            processedHeaders = new java.util.HashMap<>();
+            for (Map.Entry<String, String> headerEntry : step.getHeaders().entrySet()) {
+                // Only resolve entity placeholders here, request context placeholders resolved later
+                String headerValue = replacePlaceholders(headerEntry.getValue(), entities);
+                processedHeaders.put(headerEntry.getKey(), headerValue);
+            }
+        }
+        
         return RunbookStep.builder()
                 .stepNumber(step.getStepNumber())
                 .description(description)
@@ -137,6 +149,7 @@ public class RunbookAdapter {
                 .expectedResponse(expectedResponse)
                 .autoExecutable(step.isAutoExecutable())
                 .stepType(step.getStepType())
+                .headers(processedHeaders)
                 .build();
     }
     
