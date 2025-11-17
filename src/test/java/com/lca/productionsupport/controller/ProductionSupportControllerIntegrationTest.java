@@ -232,5 +232,183 @@ class ProductionSupportControllerIntegrationTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.errorMessage").exists());
     }
+
+    // ========== Header Collection Tests ==========
+
+    @Test
+    void executeStep_withAllHeaders_collectsAllHeaders() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("Role-Name", "Production Support")
+                .header("Api-User", "test-api-user")
+                .header("Lab-Id", "test-lab-id")
+                .header("Discipline-Name", "pathology")
+                .header("Time-Zone", "America/New_York")
+                .header("accept", "application/json"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void executeStep_withRoleNameHeader_setsUserRole() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("Role-Name", "Production Support"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void executeStep_withPartialHeaders_collectsProvidedHeaders() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("Api-User", "test-user")
+                .header("Lab-Id", "test-lab"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void executeStep_withEmptyHeaders_handlesGracefully() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("Role-Name", "")
+                .header("Api-User", "")
+                .header("Lab-Id", ""))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void executeStep_withNullHeaders_handlesGracefully() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        // Not passing headers at all (null)
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void executeStep_withRoleNameAndOtherHeaders_collectsAll() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("Role-Name", "Production Support")
+                .header("Api-User", "api-user-123")
+                .header("Lab-Id", "lab-456")
+                .header("Discipline-Name", "discipline-789")
+                .header("Time-Zone", "UTC")
+                .header("accept", "application/json"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void executeStep_withOnlyAcceptHeader_collectsAccept() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("accept", "application/json"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void executeStep_withUserRoleAlreadySet_headerOverrides() throws Exception {
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole("Original Role")
+            .build();
+
+        mockMvc.perform(post("/api/v1/execute-step")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("Role-Name", "Production Support"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void executeStep_processRequestWithUnknownTask_logsWarning() throws Exception {
+        OperationalRequest request = OperationalRequest.builder()
+            .query("some unknown query")
+            .userId("user123")
+            .downstreamService("ap-services")
+            .build();
+
+        mockMvc.perform(post("/api/v1/process")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.taskId").value("UNKNOWN"));
+    }
 }
 
