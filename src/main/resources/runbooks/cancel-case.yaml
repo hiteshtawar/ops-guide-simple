@@ -76,6 +76,17 @@ execution:
       autoExecutable: false
       method: "PATCH"
       path: "/lims-api/case/{case_id}/cancel"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+        X-Idempotency-Key: "{IDEMPOTENCY_KEY}"
+        Content-Type: "application/json"
       body:
         reason: "operational_request"
         notes: "Cancelled via Production Support"
@@ -94,6 +105,15 @@ execution:
       autoExecutable: true
       method: "GET"
       path: "/lims-api/case/{case_id}/status"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
       expectedStatus: 200
       expectedResponse: "cancelled"
       errorHandling:
@@ -107,6 +127,15 @@ execution:
       autoExecutable: true
       method: "GET"
       path: "/lims-api/case/{case_id}/audit-log"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
       errorHandling:
