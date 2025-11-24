@@ -69,6 +69,11 @@ public class OperationalResponse {
         private Integer stepNumber;
         
         /**
+         * Name of the step
+         */
+        private String name;
+        
+        /**
          * Description of what this step does
          */
         private String description;

@@ -565,10 +565,9 @@ execution:
 - [ ] Approval from ap-services team lead
 - [ ] Approval from Production Support team lead
 - [ ] Database team review of connection allocation
-- [ ] Security team review
 
 **Success Metrics (3 months):**
-- [ ] 90% of operational features deployed without ap-services release
+- [ ] 100% of operational features deployed without ap-services release
 - [ ] < 2 days average time to deploy new operation
 - [ ] Zero incidents affecting core service
 - [ ] Connection pool utilization < 80%
@@ -579,26 +578,8 @@ execution:
 
 1. **Week 1:** Socialize RFC, gather feedback, finalize service name
 2. **Week 2:** Kick off implementation
-3. **Week 4:** Pilot with Cancel Case
+3. **Week 4:** Pilot with new service
 4. **Week 8:** Retrospective
-
----
-
-## Appendix: Cost Analysis
-
-### Infrastructure Costs
-
-```
-<lims-histology-data-api>:
-- ECS Fargate (512 CPU, 1GB RAM): ~$60/month
-- Total: ~$86/month = $1,032/year
-
-ROI:
-- 10 operations/year × 3 weeks saved × $5K/week = $150K/year
-- ROI: 145x
-
-Even at 1 operation/year: ROI 14x
-```
 
 ---
 
@@ -613,7 +594,7 @@ Even at 1 operation/year: ROI 14x
 **Discussion Points:**
 
 1. What's the right name for `<lims-histology-data-api>`?
-2. Approval from ap-services, database, and security teams
+2. Approval from ap-services, database, and infra teams
 3. Database connection allocation (10 connections sufficient?)
 
 **Please provide feedback by:** 2025-11-24

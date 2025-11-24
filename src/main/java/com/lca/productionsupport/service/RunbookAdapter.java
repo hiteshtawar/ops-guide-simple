@@ -100,6 +100,7 @@ public class RunbookAdapter {
             
             return RunbookStep.builder()
                     .stepNumber(step.getStepNumber())
+                    .name(step.getName())
                     .description(message)
                     .method(StepMethod.LOCAL_MESSAGE)
                     .path(null)
@@ -117,6 +118,7 @@ public class RunbookAdapter {
             
             return RunbookStep.builder()
                     .stepNumber(step.getStepNumber())
+                    .name(step.getName())
                     .description(description != null ? description : "Verify " + headerName + " header")
                     .method(StepMethod.HEADER_CHECK)
                     .path(headerName)
@@ -142,6 +144,7 @@ public class RunbookAdapter {
         
         return RunbookStep.builder()
                 .stepNumber(step.getStepNumber())
+                .name(step.getName())
                 .description(description)
                 .method(StepMethod.fromString(step.getMethod()))
                 .path(path)
