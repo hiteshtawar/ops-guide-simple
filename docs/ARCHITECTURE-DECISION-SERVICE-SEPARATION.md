@@ -1,26 +1,106 @@
-# Architecture Decision: Service Separation for lims-operations-api
+# Architecture Decision: Keep lims-operations-api Separate
+
+## Decision
+
+**Keep `lims-operations-api` as a separate service from `production-support-admin`.**
 
 ## Context
 
-**Question:** Should `lims-operations-api` be embedded in `production-support-admin` or remain a separate service?
+`production-support-admin` is a **multi-team operational and incident orchestration platform**. Any team should be able to add YAML-driven runbooks for incident response and troubleshooting without coupling to other teams' logic.
 
-**Current Design:** `production-support-admin` is a **YAML-driven operational automation platform** that enables **zero-code deployment** of new use cases with **infinite horizontal scaling**.
+**Question:** Should LIMS operations be embedded in the platform or remain separate?
 
-## Recommendation: Keep Services Separate ✅
+**Current Scale:**
+- 20 LIMS operational requests (steady state, low volume)
+- High potential for incident-driven spike loads across multiple teams
 
-## Architecture Comparison
+## Why Separation Makes Sense
 
-### Proposed Architecture (Decoupled)
+### 1. Platform Adoption Requires Neutrality
+
+**If LIMS operations are embedded:**
+```
+Team X: "Can we use production-support-admin?"
+You: "Sure, but it has LIMS stuff in it"
+Team X: "Why do we need LIMS dependencies for our runbooks?"
+❌ Platform becomes LIMS-specific
+❌ Other teams won't adopt
+```
+
+**If kept separate:**
+```
+Team X: "Can we use production-support-admin?"
+You: "Yes, just point your runbooks to your service"
+Team X: "Great, we'll add our datadog-api integration"
+✅ Platform remains neutral
+✅ Clean adoption path
+```
+
+**You're building infrastructure, not a feature service.** Embedding LIMS logic makes it LIMS-specific and prevents multi-team adoption.
+
+### 2. Incident Scaling is Different from Operational Scaling
+
+**Normal Operations** (steady state):
+- 20 LIMS operations, predictable load
+- `lims-operations-api` handles this independently
+
+**Incident Scenarios** (spike load):
+- Multiple teams trigger runbooks simultaneously
+- Orchestration layer must remain responsive
+- LIMS operations shouldn't impact platform availability
+
+**During incidents:**
+```
+┌─────────────────────────────────┐
+│  production-support-admin       │  ← Must stay responsive
+│  (Orchestration Layer)          │     during incident spikes
+└──────────┬──────────────────────┘
+           │ Routes to...
+           ├────────────────┬─────────────────┐
+           ▼                ▼                 ▼
+    ┌──────────────┐  ┌─────────────┐  ┌──────────┐
+    │ lims-ops-api │  │ datadog-api │  │ splunk...│
+    │ (may be slow)│  │             │  │          │
+    └──────────────┘  └─────────────┘  └──────────┘
+```
+
+**Separation enables:**
+- Independent scaling during high-pressure scenarios
+- Orchestration layer stays available even if LIMS is slow
+- Operational resilience, not just architectural purity
+
+### 3. Success Metric = Multi-Team Adoption
+
+**Platform success is measured by adoption, not by reducing service count.**
+
+| Metric | Embedded Approach | Separated Approach |
+|--------|-------------------|-------------------|
+| **Team onboarding** | ❌ Inherit LIMS dependencies | ✅ Clean integration points |
+| **Deployment** | ❌ Coupling across teams | ✅ Independent releases |
+| **Platform identity** | ❌ LIMS-specific tool | ✅ Neutral platform |
+| **Future teams** | ❌ Discouraged by coupling | ✅ Easy to adopt |
+
+### 4. YAML-Driven Runbook Configuration Without Platform Code Changes
+
+For platform consumers (ops teams):
+- ✅ Write YAML runbooks, not Java/Go/Python
+- ✅ Add new scenarios without platform team involvement
+- ✅ Onboard new operational APIs independently
+
+**This is valuable** - teams can respond to incidents without waiting for platform deployments.
+
+## Architecture
+
+### Recommended (Decoupled)
 ```
 ┌─────────────────────────────────┐
 │  production-support-admin       │
-│  (Service Agnostic Platform)    │
-│  - Runbook orchestration        │
-│  - Pattern matching             │
-│  - Classification               │
-│  - Routing only                 │
+│  • Multi-team platform          │
+│  • Runbook orchestration        │
+│  • Pattern matching/routing     │
+│  • Independent scaling          │
 └──────────┬──────────────────────┘
-           │ Routes to...
+           │ Routes via YAML runbooks
            ├────────────────┬─────────────────┐
            ▼                ▼                 ▼
     ┌──────────────┐  ┌─────────────┐  ┌──────────┐
@@ -28,222 +108,94 @@
     │ operations-  │  │ api         │  │ api      │
     │ api          │  │             │  │          │
     └──────────────┘  └─────────────┘  └──────────┘
+         Team A           Team B          Team C
 ```
 
-### Alternative (Tight Coupling)
+### Alternative (Embedded) - Not Recommended
 ```
 ┌──────────────────────────────────────┐
 │  production-support-admin            │
-│  - Runbook orchestration             │
-│  - LIMS operational endpoints        │
-│  - Histology data operations         │
-│  - Database access to LIMS DB        │
+│  • Contains LIMS operations          │
+│  • Contains database connections     │
+│  • LIMS-specific, not neutral        │
+│  • Other teams discouraged           │
 └──────────────────────────────────────┘
-     ❌ Now tightly coupled to LIMS
+     ❌ Tightly coupled to LIMS
+     ❌ Platform becomes feature service
 ```
 
-## Key Arguments for Separation
+## What We're Optimizing For
 
-### 1. Separation of Concerns
+**NOT optimizing for:**
+- Current LIMS volume (20 operations is low)
+- Reducing service count
+- Short-term convenience
 
-**Platform ≠ Feature Service**
+**ARE optimizing for:**
+1. Multi-team adoption
+2. Incident response resilience
+3. Platform independence
+4. Long-term extensibility
 
-- `production-support-admin` is an **orchestration platform**, not a data service
-- Mixing orchestration with operational data violates Single Responsibility Principle
-- Platform should route requests, not own data operations
+## Failure Scenarios & Resilience
 
-**Per RFC-001-OPERATIONAL-DATA-API.md:**
-```
-| Concern              | production-support-admin | lims-operations-api |
-|----------------------|--------------------------|---------------------|
-| Operational reads    | Routes                   | ✓ Owns              |
-| Operational writes   | Routes                   | ✓ Owns              |
-| Database access      | -                        | ✓ Direct            |
-```
+**Q: What happens when `lims-operations-api` is down during an incident?**
 
-### 2. Tight Coupling Problems
+With separation:
+- ✅ Orchestration layer remains available
+- ✅ Other teams' runbooks continue working
+- ✅ Can fail over to alternative operations
+- ✅ Graceful degradation per service
 
-If `lims-operations-api` is embedded in `production-support-admin`:
+With embedding:
+- ❌ Entire platform impacted by LIMS issues
+- ❌ All teams affected by one service's problems
+- ❌ Cascading failures harder to contain
 
-❌ **Schema coupling:** LIMS schema changes require production-support-admin redeployment  
-❌ **Logic pollution:** LIMS-specific business logic pollutes the platform layer  
-❌ **Database dependencies:** Platform now manages LIMS database connections  
-❌ **Testing complexity:** Cannot test LIMS operations independently  
-❌ **Deployment coupling:** Cannot deploy LIMS changes without touching orchestration  
+## Next Steps: Validate the Pattern
 
-### 3. Horizontal Scaling Independence
+**Current state:** 1 operational service (LIMS)
 
-**Decoupled Approach:**
-- `production-support-admin` scales based on **orchestration load** (request classification, routing)
-- `lims-operations-api` scales based on **data operation load** (queries, updates)
-- Different load patterns, different scaling needs
+**Next validation milestone:**
+1. Onboard a second team's operational API (e.g., `datadog-api`)
+2. Validate platform abstraction actually works across teams
+3. Confirm runbook patterns are reusable
+4. **If second integration is painful, we learn early**
 
-**Coupled Approach:**
-- Single service must scale for both patterns
-- Inefficient resource allocation
-- Higher operational complexity
-
-### 4. Service Agnostic = Future Proof
-
-**With Separation:**
-```java
-production-support-admin
-  ├── Routes to lims-operations-api
-  ├── Routes to datadog-api                   // Future
-  ├── Routes to splunk-api                    // Future
-  └── Routes to any-new-downstream-service    // Future
-```
-
-**Platform Characteristics:**
-- ✅ Service agnostic orchestration
-- ✅ Zero-code deployment for new use cases
-- ✅ Infinite horizontal scaling
-- ✅ Easy to plug in new downstream services
-
-**With Embedding:**
-```java
-production-support-admin
-  ├── Contains LIMS operations (tightly coupled)
-  ├── Contains Datadog integration? (growing monolith)
-  ├── Contains Splunk integration? (bloated)
-  └── Contains everything? (defeats the platform vision)
-```
-
-**Anti-patterns:**
-- ❌ Growing monolith
-- ❌ Code changes required for new features (breaks zero-code promise)
-- ❌ Difficult to extend without bloating the service
-
-### 5. The Zero-Code Deployment Promise
-
-**Claim:** "YAML-driven operational automation platform with zero-code deployment"
-
-**With Separation:**
-- ✅ Add new LIMS operations in `lims-operations-api` without touching platform
-- ✅ Add new YAML runbooks in `production-support-admin` without touching operational services
-- ✅ True zero-code deployment for new use cases
-
-**With Embedding:**
-- ❌ Every new LIMS feature requires code changes in orchestration service
-- ❌ Breaks the zero-code deployment promise
-- ❌ Platform becomes a feature service, not an orchestration layer
-
-### 6. Database Connection Management
-
-**Separation:**
-- `lims-operations-api` owns connection pools to LIMS database
-- `production-support-admin` has no database dependencies
-- Clean separation of concerns
-
-**Embedding:**
-- `production-support-admin` needs connection pools to LIMS DB
-- Couples orchestration layer to specific database schemas
-- Complex connection management and transaction handling
-- Security: orchestration service now has direct DB access
-
-### 7. Testing & Deployment Independence
-
-**Decoupled Benefits:**
-- Test LIMS operations independently with focused test suites
-- Deploy LIMS changes without affecting orchestration
-- Rollback LIMS changes without platform impact
-- Independent CI/CD pipelines
-- Faster feedback loops
-
-**Coupled Drawbacks:**
-- Integration tests become more complex
-- Deployment requires full regression testing
-- Rollback affects entire platform
-- Slower release cycles
-
-### 8. Team Autonomy
-
-**With Separation:**
-- Platform team owns orchestration logic
-- LIMS team owns data operations
-- Clear ownership boundaries
-- Parallel development without conflicts
-
-**With Embedding:**
-- Both teams work in same codebase
-- Increased merge conflicts
-- Coordination overhead
-- Slower velocity
+Getting to 2 services proves the platform pattern. This is not premature optimization.
 
 ## Technical Concerns Addressed
 
 ### "Too Many Services?"
-
-**Response:** 
-- Microservices architecture is about logical boundaries, not service count
-- Each service has clear responsibility
+- Microservices are about logical boundaries, not service count
 - Operational overhead is manageable with modern tooling (K8s, service mesh)
-- The alternative (monolith) has worse long-term costs
+- Alternative (monolith) has worse long-term costs for multi-team adoption
 
 ### "Network Latency?"
-
-**Response:**
-- Latency from one extra hop is negligible (< 1ms in same cluster)
+- One extra hop adds < 1ms in same cluster
 - Benefit of independent scaling outweighs minimal latency
-- Can implement caching strategies if needed
-- gRPC or service mesh can optimize inter-service communication
+- gRPC or service mesh can optimize if needed
 
 ### "Operational Complexity?"
-
-**Response:**
-- Modern platforms (Kubernetes, Istio) handle service orchestration well
-- Observability tools (Datadog, Splunk) work better with separated services
-- Easier to debug isolated failures
-- Better separation makes incidents easier to resolve
-
-## Decision
-
-**Recommendation:** Keep `lims-operations-api` as a separate service
-
-**Rationale:**
-1. Maintains platform's service-agnostic design
-2. Enables true zero-code deployment promise
-3. Prevents tight coupling and monolith anti-pattern
-4. Supports infinite horizontal scaling vision
-5. Follows documented architecture (RFC-001)
-6. Enables future extensibility (monitoring integrations, alerting)
-7. Maintains clear separation of concerns
-
-## Implementation Path
-
-### Phase 1: Current State (Recommended)
-```
-production-support-admin (orchestration)
-    ↓ routes to
-lims-operations-api (LIMS operations)
-```
-
-### Phase 2: Future Growth
-```
-production-support-admin (orchestration)
-    ├── lims-operations-api
-    ├── datadog-api
-    └── splunk-api
-```
+- Modern platforms handle service orchestration well
+- Observability tools work better with separated services
+- Easier to debug and resolve isolated failures
 
 ## Conclusion
 
-**The platform promise is:**
-> "YAML-driven operational automation platform that enables zero-code deployment of new use cases with infinite horizontal scaling"
+**The platform promise:**
+> Multi-team operational and incident orchestration platform where any team can add runbooks without coupling to other teams' logic.
 
-**Embedding LIMS operations breaks this promise by:**
-- Coupling orchestration to specific downstream logic
-- Requiring code changes for new features
-- Creating a growing monolith
-- Limiting horizontal scaling independence
+**Embedding LIMS operations breaks this by:**
+- Making the platform LIMS-specific
+- Preventing multi-team adoption
+- Coupling incident response to LIMS availability
 
 **Separation maintains the promise by:**
-- Keeping the platform service-agnostic
-- Enabling true zero-code YAML-driven deployment
-- Supporting infinite horizontal scaling
-- Making it easy for any service to hook into the platform
+- Keeping platform neutral and adoptable
+- Enabling independent scaling during incidents
+- Building infrastructure, not features
 
 ---
 
-**Decision:** Maintain service separation. Let `production-support-admin` be the platform it was designed to be.
-
+**Recommendation:** Maintain service separation and validate the pattern by onboarding a second team's operational API.
