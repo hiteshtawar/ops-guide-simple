@@ -1,8 +1,8 @@
-# Architecture Decision: Keep lims-operations-api Separate
+# Architecture Decision: Keep connect-assist-api Separate
 
 ## Decision
 
-**Keep `lims-operations-api` as a separate service from `production-support-admin`.**
+**Keep `connect-assist-api` as a separate service from `production-support-admin`.**
 
 ## Context
 
@@ -42,7 +42,7 @@ Team X: "Great, we'll add our datadog-api integration"
 
 **Normal Operations** (steady state):
 - 20 LIMS operations, predictable load
-- `lims-operations-api` handles this independently
+- `connect-assist-api` handles this independently
 
 **Incident Scenarios** (spike load):
 - Multiple teams trigger runbooks simultaneously
@@ -139,7 +139,7 @@ For platform consumers (ops teams):
 
 ## Failure Scenarios & Resilience
 
-**Q: What happens when `lims-operations-api` is down during an incident?**
+**Q: What happens when `connect-assist-api` is down during an incident?**
 
 With separation:
 - ✅ Orchestration layer remains available
