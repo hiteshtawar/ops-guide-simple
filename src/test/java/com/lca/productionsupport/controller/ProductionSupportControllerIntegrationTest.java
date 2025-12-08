@@ -178,7 +178,7 @@ class ProductionSupportControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.errorMessage").value("Step not found"));
+            .andExpect(jsonPath("$.errorMessage").value("The requested operation step was not found. Please verify the step number."));
     }
 
     @Test

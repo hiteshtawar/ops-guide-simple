@@ -9,7 +9,6 @@ import com.lca.productionsupport.model.StepMethod;
 import com.lca.productionsupport.model.UseCaseDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -33,6 +32,7 @@ public class StepExecutionService {
     private final WebClientRegistry webClientRegistry;
     private final RunbookRegistry runbookRegistry;
     private final RunbookAdapter runbookAdapter;
+    private final ErrorMessageTranslator errorMessageTranslator;
     
     /**
      * Execute a specific step
@@ -45,10 +45,12 @@ public class StepExecutionService {
         
         if (step == null) {
             log.warn("Step not found for taskId: {}, stepNumber: {}", request.getTaskId(), request.getStepNumber());
+            ErrorMessageTranslator.TranslationResult translation = errorMessageTranslator.translate("Step not found");
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
-                .errorMessage("Step not found")
+                .errorMessage(translation.getUserFriendlyMessage())
+                .responseBody(translation.getTechnicalDetails())
                 .durationMs(System.currentTimeMillis() - startTime)
                 .build();
         }
@@ -73,10 +75,14 @@ public class StepExecutionService {
         try {
             webClient = webClientRegistry.getWebClient(request.getDownstreamService());
         } catch (IllegalArgumentException e) {
+            ErrorMessageTranslator.TranslationResult translation = errorMessageTranslator.translate(
+                "Downstream service not configured: " + request.getDownstreamService()
+            );
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
-                .errorMessage("Downstream service not configured: " + request.getDownstreamService())
+                .errorMessage(translation.getUserFriendlyMessage())
+                .responseBody(translation.getTechnicalDetails())
                 .durationMs(System.currentTimeMillis() - startTime)
                 .build();
         }
@@ -123,11 +129,15 @@ public class StepExecutionService {
         } catch (Exception e) {
             log.error("Failed to execute step {}", request.getStepNumber(), e);
             
+            // Translate technical error to user-friendly message
+            ErrorMessageTranslator.TranslationResult translation = errorMessageTranslator.translate(e.getMessage());
+            
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
                 .stepDescription(step.getDescription())
-                .errorMessage(e.getMessage())
+                .errorMessage(translation.getUserFriendlyMessage())
+                .responseBody(translation.getTechnicalDetails())
                 .durationMs(System.currentTimeMillis() - startTime)
                 .build();
         }

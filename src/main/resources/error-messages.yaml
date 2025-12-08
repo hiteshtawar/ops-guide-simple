@@ -1,0 +1,67 @@
+# Error Message Mappings
+# Pattern matching for technical errors to user-friendly messages
+# Patterns are checked in order, first match wins
+
+errorMappings:
+  # Configuration errors (check these first to avoid false positives)
+  - pattern: "Step not found"
+    userMessage: "The requested operation step was not found. Please verify the step number."
+    category: "CONFIG_ERROR"
+  
+  - pattern: "Downstream service not configured"
+    userMessage: "The requested service is not properly configured. Please contact support."
+    category: "CONFIG_ERROR"
+  
+  # Connection errors
+  - pattern: "Connection refused.*:(\\d+)"
+    userMessage: "Unable to connect to the downstream service. The service may be unavailable or not responding."
+    category: "CONNECTION_ERROR"
+  
+  - pattern: "Connection timed out"
+    userMessage: "The connection to the downstream service timed out. Please try again later."
+    category: "CONNECTION_ERROR"
+  
+  - pattern: "No route to host"
+    userMessage: "Unable to reach the downstream service. Network connectivity issue detected."
+    category: "CONNECTION_ERROR"
+    
+  - pattern: "UnknownHostException|Name or service not known"
+    userMessage: "Unable to resolve the service address. The service may be misconfigured."
+    category: "CONNECTION_ERROR"
+  
+  # Timeout errors
+  - pattern: ".*timeout.*|.*timed out.*"
+    userMessage: "The operation took too long to complete and was cancelled. Please try again."
+    category: "TIMEOUT_ERROR"
+  
+  # Authentication/Authorization errors  
+  - pattern: "401|Unauthorized|Authentication failed"
+    userMessage: "Authentication failed. Please verify your credentials and try again."
+    category: "AUTH_ERROR"
+  
+  - pattern: "403|Forbidden|Access denied"
+    userMessage: "You do not have permission to perform this action."
+    category: "AUTH_ERROR"
+  
+  # API errors
+  - pattern: "API Error: .*400.*|Bad Request"
+    userMessage: "The request contains invalid data. Please check the input parameters."
+    category: "API_ERROR"
+  
+  - pattern: "API Error: .*404.*|Not Found"
+    userMessage: "The requested resource was not found in the system."
+    category: "API_ERROR"
+  
+  - pattern: "API Error: .*500.*|Internal Server Error"
+    userMessage: "The downstream service encountered an error. Please try again or contact support if the issue persists."
+    category: "API_ERROR"
+  
+  - pattern: "API Error: .*503.*|Service Unavailable"
+    userMessage: "The downstream service is temporarily unavailable. Please try again in a few moments."
+    category: "API_ERROR"
+  
+  # Generic fallback
+  - pattern: ".*"
+    userMessage: "An unexpected error occurred while processing your request. Please try again or contact support if the issue persists."
+    category: "UNKNOWN_ERROR"
+

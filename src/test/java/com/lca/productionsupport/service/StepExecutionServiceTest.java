@@ -24,6 +24,7 @@ class StepExecutionServiceTest {
     private RunbookRegistry runbookRegistry;
     private RunbookAdapter runbookAdapter;
     private WebClientRegistry webClientRegistry;
+    private ErrorMessageTranslator errorMessageTranslator;
     private DownstreamServiceProperties serviceProperties;
 
     @BeforeEach
@@ -41,8 +42,10 @@ class StepExecutionServiceTest {
         webClientRegistry = new WebClientRegistry(serviceProperties);
         runbookRegistry = new TestRunbookRegistry();
         runbookAdapter = new RunbookAdapter();
+        errorMessageTranslator = new ErrorMessageTranslator();
+        errorMessageTranslator.init();
         
-        stepExecutionService = new StepExecutionService(webClientRegistry, runbookRegistry, runbookAdapter);
+        stepExecutionService = new StepExecutionService(webClientRegistry, runbookRegistry, runbookAdapter, errorMessageTranslator);
     }
     
     // Test-specific runbook registry that loads YAMLs properly
@@ -86,8 +89,11 @@ class StepExecutionServiceTest {
         assertFalse(response.getSuccess());
         assertEquals(3, response.getStepNumber());
         assertNotNull(response.getErrorMessage());
-        assertTrue(response.getErrorMessage().contains("Downstream service not configured"));
-        assertTrue(response.getErrorMessage().contains("unknown-service"));
+        // Error message should now be user-friendly
+        assertEquals("The requested service is not properly configured. Please contact support.", response.getErrorMessage());
+        // Technical details should be in responseBody
+        assertNotNull(response.getResponseBody());
+        assertTrue(response.getResponseBody().contains("unknown-service"));
         assertTrue(response.getDurationMs() >= 0);
     }
 
@@ -106,7 +112,8 @@ class StepExecutionServiceTest {
 
         assertFalse(response.getSuccess());
         assertEquals(999, response.getStepNumber());
-        assertEquals("Step not found", response.getErrorMessage());
+        // Error message should now be user-friendly
+        assertEquals("The requested operation step was not found. Please verify the step number.", response.getErrorMessage());
         assertTrue(response.getDurationMs() >= 0);
     }
 
@@ -124,7 +131,8 @@ class StepExecutionServiceTest {
         StepExecutionResponse response = stepExecutionService.executeStep(request);
 
         assertFalse(response.getSuccess());
-        assertEquals("Step not found", response.getErrorMessage());
+        // Error message should now be user-friendly
+        assertEquals("The requested operation step was not found. Please verify the step number.", response.getErrorMessage());
     }
 
     @Test
@@ -141,7 +149,8 @@ class StepExecutionServiceTest {
         StepExecutionResponse response = stepExecutionService.executeStep(request);
 
         assertFalse(response.getSuccess());
-        assertEquals("Step not found", response.getErrorMessage());
+        // Error message should now be user-friendly
+        assertEquals("The requested operation step was not found. Please verify the step number.", response.getErrorMessage());
     }
 
     @Test
@@ -158,7 +167,8 @@ class StepExecutionServiceTest {
         StepExecutionResponse response = stepExecutionService.executeStep(request);
 
         assertFalse(response.getSuccess());
-        assertEquals("Step not found", response.getErrorMessage());
+        // Error message should now be user-friendly
+        assertEquals("The requested operation step was not found. Please verify the step number.", response.getErrorMessage());
     }
 
     @Test
@@ -175,7 +185,8 @@ class StepExecutionServiceTest {
         StepExecutionResponse response = stepExecutionService.executeStep(request);
 
         assertFalse(response.getSuccess());
-        assertEquals("Step not found", response.getErrorMessage());
+        // Error message should now be user-friendly
+        assertEquals("The requested operation step was not found. Please verify the step number.", response.getErrorMessage());
     }
 
     // ========== Service Configuration Tests ==========
@@ -195,7 +206,7 @@ class StepExecutionServiceTest {
 
         // May fail due to network, but should NOT fail with "service not configured" error
         if (!response.getSuccess()) {
-            assertFalse(response.getErrorMessage().contains("Downstream service not configured"));
+            assertFalse(response.getErrorMessage().contains("not properly configured"));
         }
     }
 
@@ -282,7 +293,7 @@ class StepExecutionServiceTest {
         StepExecutionRequest request = StepExecutionRequest.builder()
             .taskId("CANCEL_CASE")
             .downstreamService("unknown-service")
-            .stepNumber(1)
+            .stepNumber(3) // Use step 3 which requires downstream service
             .entities(Map.of())
             .userId("user123")
             .authToken("token")
@@ -294,7 +305,8 @@ class StepExecutionServiceTest {
         assertNotNull(response.getStepNumber());
         assertNotNull(response.getErrorMessage());
         assertNotNull(response.getDurationMs());
-        assertNull(response.getResponseBody());
+        // Technical details should be in responseBody for errors
+        assertNotNull(response.getResponseBody());
     }
 
     // ========== Step Validation Tests ==========
@@ -349,7 +361,8 @@ class StepExecutionServiceTest {
         StepExecutionResponse response = stepExecutionService.executeStep(request);
 
         assertFalse(response.getSuccess());
-        assertEquals("Step not found", response.getErrorMessage());
+        // Error message should now be user-friendly
+        assertEquals("The requested operation step was not found. Please verify the step number.", response.getErrorMessage());
     }
 
     @Test
@@ -383,7 +396,8 @@ class StepExecutionServiceTest {
         StepExecutionResponse response = stepExecutionService.executeStep(request);
 
         assertFalse(response.getSuccess());
-        assertTrue(response.getErrorMessage().contains("not configured"));
+        // Error message should now be user-friendly
+        assertEquals("The requested service is not properly configured. Please contact support.", response.getErrorMessage());
     }
 
     @Test
@@ -417,7 +431,7 @@ class StepExecutionServiceTest {
         };
         
         StepExecutionService testService = new StepExecutionService(
-            webClientRegistry, testRegistry, runbookAdapter);
+            webClientRegistry, testRegistry, runbookAdapter, errorMessageTranslator);
         
         StepExecutionRequest request = StepExecutionRequest.builder()
             .taskId("TEST_PUT")
