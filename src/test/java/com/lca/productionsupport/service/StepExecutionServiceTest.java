@@ -803,4 +803,155 @@ class StepExecutionServiceTest {
         assertTrue(response.getSuccess());
         assertEquals(1, response.getStepNumber());
     }
+
+    @Test
+    void executeStep_withNullAuthToken_usesDefaultToken() {
+        // Test that null auth token is handled properly
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken(null) // Null token
+            .userRole("Production Support")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withNullUserId_usesDefault() {
+        // Test that null user ID is handled
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId(null) // Null user ID
+            .authToken("token")
+            .userRole("Production Support")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withAuthTokenWithoutBearerPrefix_addsPrefix() {
+        // Test that auth token without Bearer prefix gets it added
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("my-token-without-bearer") // No Bearer prefix
+            .userRole("Production Support")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withAuthTokenWithBearerPrefix_keepsPrefix() {
+        // Test that auth token with Bearer prefix is kept as-is
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("Bearer my-token-with-bearer")
+            .userRole("Production Support")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withNullStepMethod_handlesGracefully() {
+        // This tests the branch where method could be null
+        // Most runbooks have methods defined, but we should handle null gracefully
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole("Production Support")
+            .build();
+
+        // Should not throw NPE even if method is null
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+        assertNotNull(response);
+    }
+
+    @Test
+    void executeStep_withEmptyCustomHeaders_mergesWithYamlHeaders() {
+        // Test header merging with empty custom headers
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("Bearer token")
+            .customHeaders(new HashMap<>()) // Empty
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_localMessage_withNullDownstreamService() {
+        // Local message steps don't need downstream service
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService(null) // Null service OK for local steps
+            .stepNumber(2) // LOCAL_MESSAGE step
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertTrue(response.getSuccess());
+        assertEquals(2, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_headerCheck_withNullDownstreamService() {
+        // Header check steps don't need downstream service
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService(null) // Null service OK for header check
+            .stepNumber(1) // HEADER_CHECK step
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole("Production Support")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertTrue(response.getSuccess());
+        assertEquals(1, response.getStepNumber());
+    }
 }

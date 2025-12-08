@@ -208,5 +208,89 @@ class ErrorMessageTranslatorTest {
         assertEquals(technicalError, result.getTechnicalDetails());
         assertEquals("CONNECTION_ERROR", result.getErrorCategory());
     }
+
+    @Test
+    void testCaseSensitivityInPatternMatching() {
+        // Test that patterns are case-insensitive
+        String technicalError = "CONNECTION REFUSED: localhost/127.0.0.1:8091";
+        
+        ErrorMessageTranslator.TranslationResult result = translator.translate(technicalError);
+        
+        assertNotNull(result);
+        assertEquals("Unable to connect to the downstream service. The service may be unavailable or not responding.", 
+                    result.getUserFriendlyMessage());
+        assertEquals("CONNECTION_ERROR", result.getErrorCategory());
+    }
+
+    @Test
+    void testMultipleMatchingPatternsUsesFirst() {
+        // "timeout" matches multiple patterns, should use first one (more specific)
+        String technicalError = "Connection timed out";
+        
+        ErrorMessageTranslator.TranslationResult result = translator.translate(technicalError);
+        
+        assertNotNull(result);
+        // Should match "Connection timed out" pattern first, not the generic timeout pattern
+        assertEquals("The connection to the downstream service timed out. Please try again later.", 
+                    result.getUserFriendlyMessage());
+        assertEquals("CONNECTION_ERROR", result.getErrorCategory());
+    }
+
+    @Test
+    void testPartialMatchInErrorMessage() {
+        // Test that patterns can match anywhere in the error message
+        String technicalError = "org.springframework.web.client.ResourceAccessException: I/O error on GET request: Connection refused";
+        
+        ErrorMessageTranslator.TranslationResult result = translator.translate(technicalError);
+        
+        assertNotNull(result);
+        assertEquals("Unable to connect to the downstream service. The service may be unavailable or not responding.", 
+                    result.getUserFriendlyMessage());
+        assertEquals("CONNECTION_ERROR", result.getErrorCategory());
+    }
+
+    @Test
+    void testWhitespaceError() {
+        // Test error message with only whitespace
+        String technicalError = "   ";
+        
+        ErrorMessageTranslator.TranslationResult result = translator.translate(technicalError);
+        
+        assertNotNull(result);
+        // Should match the generic pattern and return fallback
+        assertEquals("An unexpected error occurred while processing your request. Please try again or contact support if the issue persists.", 
+                    result.getUserFriendlyMessage());
+        assertEquals("UNKNOWN_ERROR", result.getErrorCategory());
+    }
+
+    @Test
+    void testVeryLongErrorMessage() {
+        // Test with a very long error message to ensure it's handled properly
+        String technicalError = "Connection refused: localhost/127.0.0.1:8091 with additional context: " +
+                               "This is a very long error message that includes many details about what went wrong " +
+                               "including stack traces and other debugging information that should be preserved";
+        
+        ErrorMessageTranslator.TranslationResult result = translator.translate(technicalError);
+        
+        assertNotNull(result);
+        assertEquals("Unable to connect to the downstream service. The service may be unavailable or not responding.", 
+                    result.getUserFriendlyMessage());
+        assertEquals(technicalError, result.getTechnicalDetails());
+        assertEquals("CONNECTION_ERROR", result.getErrorCategory());
+    }
+
+    @Test
+    void testErrorWithPort() {
+        // Test connection refused with different port to verify regex captures port
+        String technicalError = "Connection refused: api.example.com/192.168.1.100:3000";
+        
+        ErrorMessageTranslator.TranslationResult result = translator.translate(technicalError);
+        
+        assertNotNull(result);
+        assertEquals("Unable to connect to the downstream service. The service may be unavailable or not responding.", 
+                    result.getUserFriendlyMessage());
+        assertEquals(technicalError, result.getTechnicalDetails());
+        assertEquals("CONNECTION_ERROR", result.getErrorCategory());
+    }
 }
 

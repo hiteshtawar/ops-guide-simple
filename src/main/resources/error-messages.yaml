@@ -13,7 +13,7 @@ errorMappings:
     category: "CONFIG_ERROR"
   
   # Connection errors
-  - pattern: "Connection refused.*:(\\d+)"
+  - pattern: "Connection refused"
     userMessage: "Unable to connect to the downstream service. The service may be unavailable or not responding."
     category: "CONNECTION_ERROR"
   
