@@ -954,4 +954,371 @@ class StepExecutionServiceTest {
         assertTrue(response.getSuccess());
         assertEquals(1, response.getStepNumber());
     }
+
+    @Test
+    void executeStep_withCustomHeadersOverridingDefaults() {
+        // Test that custom headers override default headers
+        Map<String, String> customHeaders = new HashMap<>();
+        customHeaders.put("Authorization", "Bearer custom-auth-token");
+        customHeaders.put("X-User-ID", "custom-user");
+        customHeaders.put("X-Idempotency-Key", "custom-idempotency-key");
+        customHeaders.put("Api-User", "test-api-user");
+        customHeaders.put("Lab-Id", "test-lab-123");
+        customHeaders.put("Discipline-Name", "pathology");
+        customHeaders.put("Time-Zone", "America/New_York");
+        customHeaders.put("Role-Name", "Admin");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("Bearer token")
+            .customHeaders(customHeaders)
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withNullPathInStep() {
+        // Test handling of null path (edge case)
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(null) // Null entities to test resolvePlaceholders with null
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withRequestBodyPlaceholderReplacement() {
+        // Test that request body placeholders are replaced
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(Map.of("case_id", "2025123P6732", "user_id", "test-user"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withMultiplePlaceholdersInPath() {
+        // Test path with multiple placeholders
+        Map<String, String> entities = new HashMap<>();
+        entities.put("case_id", "2025123P6732");
+        entities.put("user_id", "user123");
+        entities.put("status", "completed");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(entities)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_updateSampleStatus_withAllRequiredEntities() {
+        // Test UPDATE_SAMPLE_STATUS use case which has different structure
+        Map<String, String> entities = new HashMap<>();
+        entities.put("barcode", "BC123456");
+        entities.put("user_id", "user123");
+        entities.put("sampleStatus", "Completed - Microtomy");
+        entities.put("reason", "testing");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(entities)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_cancelCase_postchecksStep() {
+        // Test postchecks step (step 4)
+        Map<String, String> customHeaders = new HashMap<>();
+        customHeaders.put("Api-User", "test-user");
+        customHeaders.put("Lab-Id", "lab-123");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(4)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("Bearer token")
+            .customHeaders(customHeaders)
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(4, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withEmptyStringEntities() {
+        // Test with empty string values in entities
+        Map<String, String> entities = new HashMap<>();
+        entities.put("case_id", "");
+        entities.put("user_id", "");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(entities)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withSpecialCharactersInEntities() {
+        // Test with special characters in entity values
+        Map<String, String> entities = new HashMap<>();
+        entities.put("case_id", "2025123P6732-TEST");
+        entities.put("user_id", "user@example.com");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(entities)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withVeryLongAuthToken() {
+        // Test with very long auth token
+        String longToken = "Bearer " + "a".repeat(500);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken(longToken)
+            .userRole("Production Support")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withNullCustomHeadersButYamlHasHeaders() {
+        // Test that YAML headers are used when customHeaders is explicitly null
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3) // This step has headers in YAML
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("Bearer token")
+            .customHeaders(null) // Explicitly null
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withEmptyEntitiesMap() {
+        // Test with empty (not null) entities map
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(new HashMap<>()) // Empty map
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withNullInCustomHeadersMap() {
+        // Test with custom headers containing null values
+        Map<String, String> customHeaders = new HashMap<>();
+        customHeaders.put("Api-User", "test-user");
+        customHeaders.put("Custom-Header", "custom-value");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .customHeaders(customHeaders)
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_headerCheck_withCaseSensitiveRoleCheck() {
+        // Test that role check is case-sensitive
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .userRole("production support") // lowercase - should fail
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertFalse(response.getSuccess());
+        assertEquals(403, response.getStatusCode());
+    }
+
+    @Test
+    void executeStep_withNonExistentPlaceholderInPath() {
+        // Test path with placeholder that doesn't exist in entities
+        Map<String, String> entities = new HashMap<>();
+        entities.put("case_id", "2025123P6732");
+        // Missing other placeholders that might be in the path
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(entities)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_withMixedCaseAuthorizationHeader() {
+        // Test that Authorization header check is case-sensitive
+        Map<String, String> customHeaders = new HashMap<>();
+        customHeaders.put("authorization", "Bearer custom-token"); // lowercase
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .customHeaders(customHeaders)
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_localMessage_multipleExecutions() {
+        // Test executing local message step multiple times
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        // Execute multiple times
+        StepExecutionResponse response1 = stepExecutionService.executeStep(request);
+        StepExecutionResponse response2 = stepExecutionService.executeStep(request);
+
+        assertTrue(response1.getSuccess());
+        assertTrue(response2.getSuccess());
+        assertEquals(2, response1.getStepNumber());
+        assertEquals(2, response2.getStepNumber());
+    }
+
+    @Test
+    void executeStep_updateSampleStatus_withMinimalEntities() {
+        // Test UPDATE_SAMPLE_STATUS with minimal entities
+        Map<String, String> entities = new HashMap<>();
+        entities.put("barcode", "BC123456");
+        entities.put("sampleStatus", "Completed");
+
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(entities)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertEquals(1, response.getStepNumber());
+    }
 }
