@@ -137,6 +137,17 @@ execution:
       autoExecutable: false
       method: "PATCH"
       path: "/lims-api/samples/{barcode}/status"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+        X-Idempotency-Key: "{IDEMPOTENCY_KEY}"
+        Content-Type: "application/json"
       body:
         sampleStatus: "{sampleStatus}"
       expectedStatus: 200
@@ -153,6 +164,15 @@ execution:
       autoExecutable: true
       method: "GET"
       path: "/lims-api/samples/{barcode}/status"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
       expectedStatus: 200
       expectedResponse: "{sampleStatus}"
       errorHandling:
@@ -166,6 +186,15 @@ execution:
       autoExecutable: true
       method: "GET"
       path: "/lims-api/samples/{barcode}/audit-log"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
       errorHandling:
