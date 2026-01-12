@@ -57,6 +57,9 @@ public class RunbookEntityExtractor {
                 if (matcher.find()) {
                     String value = matcher.group(1);
                     
+                    // Trim brackets if present (handles cases where user copies example with [placeholder])
+                    value = trimBrackets(value);
+                    
                     // Apply transformations
                     value = applyTransform(value, config.getTransform());
                     
@@ -71,6 +74,21 @@ public class RunbookEntityExtractor {
         }
         
         return null;
+    }
+    
+    /**
+     * Trim brackets from value if present (handles cases where user copies example with [placeholder])
+     */
+    private String trimBrackets(String value) {
+        if (value == null) {
+            return value;
+        }
+        // Remove leading [ and trailing ] if both are present
+        value = value.trim();
+        if (value.startsWith("[") && value.endsWith("]")) {
+            value = value.substring(1, value.length() - 1).trim();
+        }
+        return value;
     }
     
     private String applyTransform(String value, String transform) {

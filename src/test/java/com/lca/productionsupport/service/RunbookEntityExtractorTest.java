@@ -453,5 +453,35 @@ class RunbookEntityExtractorTest {
         assertNull(result.get("case_id"));
         // Should log warning but not throw
     }
+
+    @Test
+    void extract_withBrackets_trimsBrackets() {
+        // Test that brackets are trimmed from extracted values
+        // This handles cases where user copies example query with [placeholder]
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of("case\\s+([\\w\\[\\]]+)"));
+        entityConfig.setRequired(false);
+        
+        config.setEntities(Map.of("case_id", entityConfig));
+        
+        // Test with brackets around the value
+        Map<String, String> result = extractor.extract("cancel case [2025123P6732]", config);
+        assertEquals("2025123P6732", result.get("case_id"));
+    }
+
+    @Test
+    void extract_withBracketsInPattern_trimsCorrectly() {
+        // Test bracket trimming with a pattern that might capture brackets
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of("barcode\\s+is\\s+([A-Za-z0-9\\-_\\[\\]]+)"));
+        entityConfig.setRequired(false);
+        
+        config.setEntities(Map.of("barcode", entityConfig));
+        
+        Map<String, String> result = extractor.extract("barcode is [BC123456]", config);
+        assertEquals("BC123456", result.get("barcode"));
+    }
 }
 

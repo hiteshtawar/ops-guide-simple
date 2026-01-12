@@ -126,12 +126,16 @@ public class ProductionSupportOrchestrator {
         
         // Add all runbooks from registry
         for (UseCaseDefinition useCase : runbookRegistry.getAllUseCases()) {
-            Map<String, String> task = Map.of(
-                "taskId", useCase.getUseCase().getId(),
-                "taskName", useCase.getUseCase().getName(),
-                "description", useCase.getUseCase().getDescription() != null ? 
-                    useCase.getUseCase().getDescription() : ""
-            );
+            Map<String, String> task = new java.util.HashMap<>();
+            task.put("taskId", useCase.getUseCase().getId());
+            task.put("taskName", useCase.getUseCase().getName());
+            task.put("description", useCase.getUseCase().getDescription() != null ? 
+                useCase.getUseCase().getDescription() : "");
+            // Add example query if available
+            if (useCase.getUseCase().getExampleQuery() != null && 
+                !useCase.getUseCase().getExampleQuery().isEmpty()) {
+                task.put("exampleQuery", useCase.getUseCase().getExampleQuery());
+            }
             tasks.add(task);
         }
         

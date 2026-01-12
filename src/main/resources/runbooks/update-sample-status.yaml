@@ -5,6 +5,7 @@ useCase:
   category: "sample-management"
   version: "1.0"
   downstreamService: "ap-services"
+  exampleQuery: "Update sample status for [sample_barcode] to [sample_status]"
 
 classification:
   keywords:

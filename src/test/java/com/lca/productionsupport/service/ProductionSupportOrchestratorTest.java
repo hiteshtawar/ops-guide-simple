@@ -336,6 +336,8 @@ class ProductionSupportOrchestratorTest {
         assertEquals("CANCEL_CASE", cancelTask.get().get("taskId"));
         assertEquals("Cancel Case", cancelTask.get().get("taskName"));
         assertTrue(cancelTask.get().get("description").contains("cancellation"));
+        assertNotNull(cancelTask.get().get("exampleQuery"));
+        assertTrue(cancelTask.get().get("exampleQuery").contains("[case_number]"));
     }
 
     @Test
@@ -350,6 +352,25 @@ class ProductionSupportOrchestratorTest {
         assertEquals("UPDATE_SAMPLE_STATUS", updateTask.get().get("taskId"));
         assertEquals("Update Sample Status", updateTask.get().get("taskName"));
         assertTrue(updateTask.get().get("description").contains("status"));
+        assertNotNull(updateTask.get().get("exampleQuery"));
+        assertTrue(updateTask.get().get("exampleQuery").contains("[sample_barcode]"));
+        assertTrue(updateTask.get().get("exampleQuery").contains("[sample_status]"));
+    }
+
+    @Test
+    void getAvailableTasks_updateStainNameHasCorrectFields() {
+        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+
+        Optional<Map<String, String>> stainTask = tasks.stream()
+            .filter(t -> "UPDATE_STAIN_NAME".equals(t.get("taskId")))
+            .findFirst();
+
+        assertTrue(stainTask.isPresent());
+        assertEquals("UPDATE_STAIN_NAME", stainTask.get().get("taskId"));
+        assertEquals("Update Stain Name", stainTask.get().get("taskName"));
+        assertNotNull(stainTask.get().get("exampleQuery"));
+        assertTrue(stainTask.get().get("exampleQuery").contains("[sample_barcode]"));
+        assertTrue(stainTask.get().get("exampleQuery").contains("[stain_name]"));
     }
 
     // ========== Edge Cases ==========

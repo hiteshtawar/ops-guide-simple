@@ -5,6 +5,7 @@ useCase:
   category: "case-management"
   version: "3.1"
   downstreamService: "ap-services"
+  exampleQuery: "Cancel case [case_number]"
 
 classification:
   keywords:

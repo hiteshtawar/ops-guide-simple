@@ -25,6 +25,7 @@ public class UseCaseDefinition {
         private String category;
         private String version;
         private String downstreamService;
+        private String exampleQuery; // Example query with placeholders to help users understand how to use the task
     }
 
     @Data
