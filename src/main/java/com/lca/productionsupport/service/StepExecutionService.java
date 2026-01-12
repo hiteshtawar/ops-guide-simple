@@ -91,15 +91,15 @@ public class StepExecutionService {
                 request.getStepNumber(), request.getDownstreamService(), 
                 step.getMethod(), step.getPath());
         
-        // Replace placeholders in path and body
-        String resolvedPath = resolvePlaceholders(step.getPath(), request.getEntities());
-        String resolvedBody = step.getRequestBody() != null ? 
-            resolvePlaceholders(step.getRequestBody(), request.getEntities()) : null;
-        
-        // Merge headers: YAML headers (with placeholders resolved) + request headers (request takes precedence)
-        Map<String, String> mergedHeaders = mergeHeaders(step.getHeaders(), request);
-        
         try {
+            // Replace placeholders in path and body
+            String resolvedPath = resolvePlaceholders(step.getPath(), request.getEntities());
+            String resolvedBody = step.getRequestBody() != null ? 
+                resolvePlaceholders(step.getRequestBody(), request.getEntities()) : null;
+            
+            // Merge headers: YAML headers (with placeholders resolved) + request headers (request takes precedence)
+            Map<String, String> mergedHeaders = mergeHeaders(step.getHeaders(), request);
+            
             // Get timeout for this service
             Duration timeout = webClientRegistry.getTimeout(request.getDownstreamService());
             
@@ -284,7 +284,9 @@ public class StepExecutionService {
     /**
      * Replace placeholders in string with actual values
      * Supports: {case_id}, {status}, {user_id}, etc.
-     * Throws IllegalArgumentException if any placeholders remain unresolved.
+     * Throws IllegalArgumentException if any variable-like placeholders remain unresolved.
+     * Note: Only validates placeholders that look like variable names (alphanumeric with underscores/hyphens),
+     * not JSON structure braces.
      */
     private String resolvePlaceholders(String template, java.util.Map<String, String> entities) {
         if (template == null) {
@@ -292,14 +294,12 @@ public class StepExecutionService {
         }
         
         if (entities == null || entities.isEmpty()) {
-            // Check if template has placeholders
-            if (template.contains("{") && template.contains("}")) {
-                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\{([^}]+)\\}");
-                java.util.regex.Matcher matcher = pattern.matcher(template);
-                if (matcher.find()) {
-                    String missingVar = matcher.group(1);
-                    throw new IllegalArgumentException("Not enough variable values available to expand '" + missingVar + "'");
-                }
+            // Check if template has variable-like placeholders (not JSON braces)
+            java.util.regex.Pattern varPattern = java.util.regex.Pattern.compile("\\{([A-Za-z0-9_\\-]+)\\}");
+            java.util.regex.Matcher matcher = varPattern.matcher(template);
+            if (matcher.find()) {
+                String missingVar = matcher.group(1);
+                throw new IllegalArgumentException("Not enough variable values available to expand '" + missingVar + "'");
             }
             return template;
         }
@@ -310,14 +310,12 @@ public class StepExecutionService {
             resolved = resolved.replace(placeholder, entry.getValue());
         }
         
-        // Check if any placeholders remain unresolved
-        if (resolved.contains("{") && resolved.contains("}")) {
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\{([^}]+)\\}");
-            java.util.regex.Matcher matcher = pattern.matcher(resolved);
-            if (matcher.find()) {
-                String missingVar = matcher.group(1);
-                throw new IllegalArgumentException("Not enough variable values available to expand '" + missingVar + "'");
-            }
+        // Check if any variable-like placeholders remain unresolved (ignore JSON structure)
+        java.util.regex.Pattern varPattern = java.util.regex.Pattern.compile("\\{([A-Za-z0-9_\\-]+)\\}");
+        java.util.regex.Matcher matcher = varPattern.matcher(resolved);
+        if (matcher.find()) {
+            String missingVar = matcher.group(1);
+            throw new IllegalArgumentException("Not enough variable values available to expand '" + missingVar + "'");
         }
         
         return resolved;

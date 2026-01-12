@@ -46,7 +46,7 @@ extraction:
         - "as\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)"
         - "mark\\s+status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)"
         - "set\\s+status\\s+to\\s+((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)"
-        - "(?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?(?:\\s+and\\s+update\\s+workpool)?" # Handles "Completed - Microtomy and update workpool"
+        - "((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)(?:\\s+and\\s+update\\s+workpool)?" # Handles "Completed - Microtomy and update workpool"
       required: true
       validation:
         enumValues:
