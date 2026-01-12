@@ -1321,4 +1321,95 @@ class StepExecutionServiceTest {
         assertNotNull(response);
         assertEquals(1, response.getStepNumber());
     }
+
+    @Test
+    void executeStep_withUnresolvedPlaceholderInPath_returnsFailureResponse() {
+        // Test that unresolved placeholder in path triggers validation error
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(3) // Step 3 has path with {barcode}
+            .entities(Map.of("sampleStatus", "Completed - Grossing")) // Missing barcode
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(3, response.getStepNumber());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getResponseBody().contains("barcode") || 
+                   response.getErrorMessage().contains("barcode") ||
+                   response.getResponseBody().contains("Not enough variable values"));
+    }
+
+    @Test
+    void executeStep_withUnresolvedPlaceholderInBody_returnsFailureResponse() {
+        // Test that unresolved placeholder in body triggers validation error
+        // We'll use a step that has placeholders in body
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(3) // Step 3 has body with {sampleStatus}
+            .entities(Map.of("barcode", "BC123456")) // Missing sampleStatus
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(3, response.getStepNumber());
+        assertNotNull(response.getErrorMessage());
+    }
+
+    @Test
+    void executeStep_withJsonBracesInBody_doesNotTriggerValidationError() {
+        // Test that JSON structure braces don't trigger placeholder validation
+        // This tests that our validation only checks variable-like placeholders
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("CANCEL_CASE")
+            .downstreamService("ap-services")
+            .stepNumber(3) // Step 3 has JSON body with braces
+            .entities(Map.of("case_id", "2025123P6732"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        // Should not fail due to JSON braces validation
+        assertNotNull(response);
+        assertEquals(3, response.getStepNumber());
+        // Verify it doesn't fail with placeholder validation error
+        // (may fail for network reasons, but not validation)
+        String errorBody = response.getResponseBody() != null ? response.getResponseBody() : "";
+        String errorMsg = response.getErrorMessage() != null ? response.getErrorMessage() : "";
+        assertFalse(errorBody.contains("Not enough variable values") || 
+                   errorMsg.contains("Not enough variable values"),
+                   "Should not fail with placeholder validation error for JSON braces");
+    }
+
+    @Test
+    void executeStep_withNullEntitiesAndVariablePlaceholder_returnsFailureResponse() {
+        // Test that null entities with variable placeholder triggers error
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(3) // Step 3 has {barcode} in path
+            .entities(null) // Null entities
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(3, response.getStepNumber());
+        assertNotNull(response.getErrorMessage());
+    }
 }
