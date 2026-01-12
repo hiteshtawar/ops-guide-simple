@@ -29,14 +29,14 @@ extraction:
     barcode:
       type: "string"
       patterns:
-        - "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Z0-9]{4,20})" # Alphanumeric barcode
-        - "barcode\\s+([A-Z0-9]{4,20})"
-        - "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Z0-9]{4,20})" # "for sample BC123456"
-        - "([A-Z0-9]{4,20})" # Standalone barcode
+        - "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Za-z0-9\\-_]{4,50})" # Alphanumeric barcode with hyphens/underscores
+        - "barcode\\s+([A-Za-z0-9\\-_]{4,50})"
+        - "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Za-z0-9\\-_]{4,50})" # "for sample BC123456" or "for sample 2025268T112913-A_1"
+        - "([A-Za-z0-9\\-_]{4,50})" # Standalone barcode
       required: true
       validation:
-        regex: "^[A-Z0-9]{4,20}$"
-        errorMessage: "Barcode must be alphanumeric (4-20 characters)"
+        regex: "^[A-Za-z0-9\\-_]{4,50}$"
+        errorMessage: "Barcode must be alphanumeric with optional hyphens/underscores (4-50 characters)"
     
     sampleStatus:
       type: "string"
