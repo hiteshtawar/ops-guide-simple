@@ -483,5 +483,28 @@ class RunbookEntityExtractorTest {
         Map<String, String> result = extractor.extract("barcode is [BC123456]", config);
         assertEquals("BC123456", result.get("barcode"));
     }
+
+    @Test
+    void extract_caseId_withBracketsAndLongDigits_trimsBracketsAndPreservesAllDigits() {
+        // Test that case ID with brackets and more than 4 digits after letter is extracted correctly
+        // This tests the fix for issue where [2025251T115466] was being truncated to 2025251T1154
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        entityConfig.setPatterns(List.of(
+            "(?:a\\s+|the\\s+)?case\\s+([A-Za-z0-9\\-\\[\\]]+)",
+            "(\\d{7,}[A-Z]\\d{4,})"
+        ));
+        entityConfig.setRequired(false);
+        
+        config.setEntities(Map.of("case_id", entityConfig));
+        
+        // Test with brackets
+        Map<String, String> result1 = extractor.extract("cancel case [2025251T115466]", config);
+        assertEquals("2025251T115466", result1.get("case_id"));
+        
+        // Test without brackets
+        Map<String, String> result2 = extractor.extract("cancel case 2025251T115466", config);
+        assertEquals("2025251T115466", result2.get("case_id"));
+    }
 }
 

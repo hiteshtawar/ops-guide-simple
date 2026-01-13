@@ -27,15 +27,16 @@ extraction:
     case_id:
       type: "string"
       patterns:
-        - "(?:a\\s+|the\\s+)?case\\s+(\\d{4,}\\w+)" # Handles "a case", "the case", or "case"
-        - "caseid\\s+(\\d{4,}\\w+)"
-        - "case\\s+id\\s+(\\d{4,}\\w+)"
-        - "case\\s+number\\s+(\\d{4,}\\w+)"
-        - "(\\d{7}[A-Z]\\d{4})" # Format: 7 digits + letter + 4 digits (2025123P6732 or 2025123T6732)
+        - "(?:a\\s+|the\\s+)?case\\s+([A-Za-z0-9\\-\\[\\]]+)" # Handles "a case", "the case", or "case" - allows brackets
+        - "caseid\\s+([A-Za-z0-9\\-\\[\\]]+)"
+        - "case\\s+id\\s+([A-Za-z0-9\\-\\[\\]]+)"
+        - "case\\s+number\\s+([A-Za-z0-9\\-\\[\\]]+)"
+        - "\\[?(\\d{7,}[A-Z]\\d{4,})\\]?" # Format: optional brackets, 7+ digits + letter + 4+ digits (e.g., [2025251T115466] or 2025251T115466)
+        - "(\\d{7,}[A-Z]\\d{4,})" # Format without brackets: 7+ digits + letter + 4+ digits (e.g., 2025251T115466)
       required: true
       validation:
-        regex: "^\\d{4,}\\w*$"
-        errorMessage: "Case ID must be in format: 2025123P6732"
+        regex: "^[A-Za-z0-9\\-\\[\\]]{4,}$"
+        errorMessage: "Case ID must be alphanumeric with optional brackets, hyphens (4+ characters)"
 
 execution:
   timeout: 30
