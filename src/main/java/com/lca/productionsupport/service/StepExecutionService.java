@@ -14,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +36,7 @@ public class StepExecutionService {
     private final RunbookRegistry runbookRegistry;
     private final RunbookAdapter runbookAdapter;
     private final ErrorMessageTranslator errorMessageTranslator;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     
     /**
      * Execute a specific step
@@ -132,12 +136,16 @@ public class StepExecutionService {
             // Translate technical error to user-friendly message
             ErrorMessageTranslator.TranslationResult translation = errorMessageTranslator.translate(e.getMessage());
             
+            // Extract API error message from responseBody if available
+            String apiErrorMessage = extractApiErrorMessage(translation.getTechnicalDetails());
+            
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
                 .stepDescription(step.getDescription())
                 .errorMessage(translation.getUserFriendlyMessage())
                 .responseBody(translation.getTechnicalDetails())
+                .apiErrorMessage(apiErrorMessage)
                 .durationMs(System.currentTimeMillis() - startTime)
                 .build();
         }
@@ -419,6 +427,39 @@ public class StepExecutionService {
             .filter(s -> s.getStepNumber().equals(stepNumber))
             .findFirst()
             .orElse(null);
+    }
+    
+    /**
+     * Extract the message field from API error responseBody
+     * The API response is JSON with a "message" field
+     * Handles format: "API Error: {\"status\":404,\"message\":\"Accession Case not found\"}"
+     * or direct JSON: {"status":404,"message":"Accession Case not found"}
+     * Returns the message value, or null if not found
+     */
+    String extractApiErrorMessage(String responseBody) {
+        if (responseBody == null || responseBody.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            String jsonPart = responseBody;
+            
+            // Remove "API Error: " prefix if present (we add this prefix in executeHttpRequest)
+            if (responseBody.startsWith("API Error: ")) {
+                jsonPart = responseBody.substring("API Error: ".length()).trim();
+            }
+            
+            // Parse JSON and extract message field (this is the actual API response)
+            JsonNode jsonNode = objectMapper.readTree(jsonPart);
+            if (jsonNode.has("message") && jsonNode.get("message").isTextual()) {
+                return jsonNode.get("message").asText();
+            }
+        } catch (Exception e) {
+            // If parsing fails, return null (keep it simple)
+            log.debug("Could not extract API error message from responseBody: {}", responseBody, e);
+        }
+        
+        return null;
     }
 }
 

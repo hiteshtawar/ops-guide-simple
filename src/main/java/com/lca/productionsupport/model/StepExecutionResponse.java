@@ -45,6 +45,11 @@ public class StepExecutionResponse {
     private String errorMessage;
     
     /**
+     * API error message extracted from responseBody (simplified for user display)
+     */
+    private String apiErrorMessage;
+    
+    /**
      * Time taken in milliseconds
      */
     private Long durationMs;
