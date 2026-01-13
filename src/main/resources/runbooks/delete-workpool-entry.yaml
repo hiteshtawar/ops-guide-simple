@@ -1,0 +1,142 @@
+useCase:
+  id: "DELETE_WORKPOOL_ENTRY"
+  name: "Delete Workpool Entry"
+  description: "Delete a workpool entry for a sample by barcode and workpool name"
+  category: "sample-management"
+  version: "1.0"
+  downstreamService: "ap-services"
+  exampleQuery: "Delete workpool entry [workpool_name] for sample [sample_barcode]"
+
+classification:
+  keywords:
+    - "delete workpool entry"
+    - "delete workpool"
+    - "remove workpool entry"
+    - "remove workpool"
+    - "delete entry"
+    - "remove entry"
+  synonyms:
+    delete: ["remove", "clear"]
+    workpool: ["workpool entry", "work pool", "work pool entry"]
+    sample: ["slide", "container", "block", "specimen"]
+  requiredEntities:
+    - barcode
+    - workpoolName
+
+extraction:
+  entities:
+    barcode:
+      type: "string"
+      patterns:
+        - "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Za-z0-9\\-_]{4,50})" # Alphanumeric barcode with hyphens/underscores
+        - "barcode\\s+([A-Za-z0-9\\-_]{4,50})"
+        - "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Za-z0-9\\-_]{4,50})" # "for sample BC123456"
+        - "([A-Za-z0-9\\-_]{4,50})" # Standalone barcode
+      required: true
+      validation:
+        regex: "^[A-Za-z0-9\\-_]{4,50}$"
+        errorMessage: "Barcode must be alphanumeric with optional hyphens/underscores (4-50 characters)"
+    
+    workpoolName:
+      type: "string"
+      patterns:
+        - "workpool\\s+entry\\s+([A-Za-z0-9\\-_\\s]+)\\s+for" # "workpool entry NAME for"
+        - "workpool\\s+([A-Za-z0-9\\-_\\s]+)\\s+for" # "workpool NAME for"
+        - "entry\\s+([A-Za-z0-9\\-_\\s]+)\\s+for" # "entry NAME for"
+        - "workpool\\s+entry\\s+([A-Za-z0-9\\-_\\s]+)" # "workpool entry NAME"
+        - "workpool\\s+([A-Za-z0-9\\-_\\s]+)" # "workpool NAME"
+        - "for\\s+workpool\\s+([A-Za-z0-9\\-_\\s]+)" # "for workpool NAME"
+      required: true
+      validation:
+        regex: "^[A-Za-z0-9\\-_\\s]{1,100}$"
+        errorMessage: "Workpool name must be alphanumeric with optional hyphens, underscores, or spaces (1-100 characters)"
+
+execution:
+  timeout: 30
+  retryPolicy:
+    maxAttempts: 3
+    backoffMs: 1000
+  
+  steps:
+    # ==================== PRECHECKS ====================
+    
+    - stepNumber: 1
+      stepType: "prechecks"
+      name: "Verify User Has Delete Permission"
+      description: "Check if user has Production Support role"
+      autoExecutable: true
+      method: "HEADER_CHECK"
+      path: "Role-Name"
+      expectedResponse: "Production Support"
+      errorHandling:
+        onFailure: "abort"
+        message: "User does not have required role for workpool entry deletion"
+    
+    - stepNumber: 2
+      stepType: "prechecks"
+      name: "Preview Workpool Entry Deletion Impact"
+      description: "Display impact message to user"
+      autoExecutable: true
+      method: "LOCAL_MESSAGE"
+      localMessage: "Workpool entry '{workpoolName}' will be deleted for barcode {barcode}. This action cannot be undone."
+      errorHandling:
+        onFailure: "continue"
+    
+    # ==================== PROCEDURE ====================
+    
+    - stepNumber: 3
+      stepType: "procedure"
+      name: "Execute Workpool Entry Deletion"
+      description: "Delete the workpool entry in the system"
+      autoExecutable: false
+      method: "DELETE"
+      path: "/lims-api/samples/{barcode}/workpool/{workpoolName}"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+        Content-Type: "application/json"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "abort"
+        message: "Failed to delete workpool entry {workpoolName} for {barcode}"
+    
+    # ==================== POSTCHECKS ====================
+    
+    - stepNumber: 4
+      stepType: "postchecks"
+      name: "Verify Workpool Entry Deleted"
+      description: "Confirm workpool entry is no longer present"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/samples/{barcode}/workpool"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify workpool entry deletion"
+
+rollback:
+  enabled: false
+
+warnings:
+  - "Deleting workpool entries may affect workflow progression. Please review pre-checks carefully."
+
+metadata:
+  author: "Connect Lims Team"
+  lastModified: "2025-01-12"
+  tags: ["sample-management", "workpool", "delete"]
