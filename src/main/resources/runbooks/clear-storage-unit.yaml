@@ -1,0 +1,148 @@
+useCase:
+  id: "CLEAR_STORAGE_UNIT"
+  name: "Clear Storage Unit"
+  description: "Remove all samples from a storage unit"
+  category: "storage-management"
+  version: "1.0"
+  downstreamService: "ap-services"
+  exampleQuery: "Clear storage unit [storage_unit_name]"
+
+classification:
+  keywords:
+    - "clear storage unit"
+    - "clear storage"
+    - "remove all samples from storage unit"
+    - "empty storage unit"
+    - "clear unit"
+  synonyms:
+    clear: ["remove", "empty", "clean"]
+    storage: ["storage unit", "storage unit name"]
+  requiredEntities:
+    - storageUnitName
+
+extraction:
+  entities:
+    storageUnitName:
+      type: "string"
+      patterns:
+        - "storage\\s+unit\\s+([A-Za-z0-9\\-_\\s]+)" # "storage unit NAME"
+        - "unit\\s+([A-Za-z0-9\\-_\\s]+)" # "unit NAME"
+        - "storage\\s+([A-Za-z0-9\\-_\\s]+)" # "storage NAME"
+        - "([A-Za-z0-9\\-_\\s]+)" # Standalone storage unit name
+      required: true
+      validation:
+        regex: "^[A-Za-z0-9\\-_\\s]{1,100}$"
+        errorMessage: "Storage unit name must be alphanumeric with optional hyphens, underscores, or spaces (1-100 characters)"
+
+execution:
+  timeout: 30
+  retryPolicy:
+    maxAttempts: 3
+    backoffMs: 1000
+  
+  steps:
+    # ==================== PRECHECKS ====================
+    
+    - stepNumber: 1
+      stepType: "prechecks"
+      name: "Verify User Has Clear Permission"
+      description: "Check if user has Production Support role"
+      autoExecutable: true
+      method: "HEADER_CHECK"
+      path: "Role-Name"
+      expectedResponse: "Production Support"
+      errorHandling:
+        onFailure: "abort"
+        message: "User does not have required role for storage unit clearing"
+    
+    - stepNumber: 2
+      stepType: "prechecks"
+      name: "Preview Storage Unit Clear Impact"
+      description: "Display impact message to user"
+      autoExecutable: true
+      method: "LOCAL_MESSAGE"
+      localMessage: "All samples will be removed from storage unit '{storageUnitName}'. This action cannot be undone."
+      errorHandling:
+        onFailure: "continue"
+    
+    # ==================== PROCEDURE ====================
+    
+    - stepNumber: 3
+      stepType: "procedure"
+      name: "Execute Storage Unit Clear"
+      description: "Remove all samples from the storage unit"
+      autoExecutable: false
+      method: "PATCH"
+      path: "/lims-api/storage-units/{storageUnitName}/clear"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+        X-Idempotency-Key: "{IDEMPOTENCY_KEY}"
+        Content-Type: "application/json"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "abort"
+        message: "Failed to clear storage unit {storageUnitName}"
+    
+    # ==================== POSTCHECKS ====================
+    
+    - stepNumber: 4
+      stepType: "postchecks"
+      name: "Verify Storage Unit Cleared"
+      description: "Confirm storage unit is now empty"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/storage-units/{storageUnitName}"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify storage unit clear"
+    
+    - stepNumber: 5
+      stepType: "postchecks"
+      name: "Verify Audit Log Entry Created"
+      description: "Check audit log for storage unit clear event"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/storage-units/{storageUnitName}/audit-log"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify audit log"
+
+rollback:
+  enabled: false
+
+warnings:
+  - "Clearing storage units will remove all samples. This action cannot be undone. Please review pre-checks carefully."
+
+metadata:
+  author: "Connect Lims Team"
+  lastModified: "2025-01-13"
+  tags: ["storage-management", "clear", "admin"]

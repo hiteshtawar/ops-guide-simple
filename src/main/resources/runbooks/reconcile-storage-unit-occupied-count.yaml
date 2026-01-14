@@ -1,0 +1,150 @@
+useCase:
+  id: "RECONCILE_STORAGE_UNIT_OCCUPIED_COUNT"
+  name: "Reconcile Storage Unit Occupied Count"
+  description: "Reconcile and update the occupied count for a storage unit"
+  category: "storage-management"
+  version: "1.0"
+  downstreamService: "ap-services"
+  exampleQuery: "Reconcile occupied count for storage unit [storage_unit_name]"
+
+classification:
+  keywords:
+    - "reconcile storage unit occupied count"
+    - "reconcile occupied count"
+    - "update occupied count"
+    - "reconcile storage unit"
+    - "update storage unit count"
+  synonyms:
+    reconcile: ["update", "refresh", "recalculate"]
+    occupied: ["occupied count", "count"]
+    storage: ["storage unit", "storage unit name"]
+  requiredEntities:
+    - storageUnitName
+
+extraction:
+  entities:
+    storageUnitName:
+      type: "string"
+      patterns:
+        - "storage\\s+unit\\s+([A-Za-z0-9\\-_\\s]+)" # "storage unit NAME"
+        - "unit\\s+([A-Za-z0-9\\-_\\s]+)" # "unit NAME"
+        - "storage\\s+([A-Za-z0-9\\-_\\s]+)" # "storage NAME"
+        - "for\\s+storage\\s+unit\\s+([A-Za-z0-9\\-_\\s]+)" # "for storage unit NAME"
+        - "([A-Za-z0-9\\-_\\s]+)" # Standalone storage unit name
+      required: true
+      validation:
+        regex: "^[A-Za-z0-9\\-_\\s]{1,100}$"
+        errorMessage: "Storage unit name must be alphanumeric with optional hyphens, underscores, or spaces (1-100 characters)"
+
+execution:
+  timeout: 30
+  retryPolicy:
+    maxAttempts: 3
+    backoffMs: 1000
+  
+  steps:
+    # ==================== PRECHECKS ====================
+    
+    - stepNumber: 1
+      stepType: "prechecks"
+      name: "Verify User Has Reconcile Permission"
+      description: "Check if user has Production Support role"
+      autoExecutable: true
+      method: "HEADER_CHECK"
+      path: "Role-Name"
+      expectedResponse: "Production Support"
+      errorHandling:
+        onFailure: "abort"
+        message: "User does not have required role for storage unit reconciliation"
+    
+    - stepNumber: 2
+      stepType: "prechecks"
+      name: "Preview Storage Unit Reconciliation Impact"
+      description: "Display impact message to user"
+      autoExecutable: true
+      method: "LOCAL_MESSAGE"
+      localMessage: "Occupied count will be reconciled and updated for storage unit '{storageUnitName}'. This may correct mismatched counts."
+      errorHandling:
+        onFailure: "continue"
+    
+    # ==================== PROCEDURE ====================
+    
+    - stepNumber: 3
+      stepType: "procedure"
+      name: "Execute Storage Unit Occupied Count Reconciliation"
+      description: "Reconcile and update the occupied count in the system"
+      autoExecutable: false
+      method: "PATCH"
+      path: "/lims-api/storage-units/{storageUnitName}/occupiedCount"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+        X-Idempotency-Key: "{IDEMPOTENCY_KEY}"
+        Content-Type: "application/json"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "abort"
+        message: "Failed to reconcile occupied count for storage unit {storageUnitName}"
+    
+    # ==================== POSTCHECKS ====================
+    
+    - stepNumber: 4
+      stepType: "postchecks"
+      name: "Verify Occupied Count Updated"
+      description: "Confirm occupied count has been reconciled"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/storage-units/{storageUnitName}"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify occupied count reconciliation"
+    
+    - stepNumber: 5
+      stepType: "postchecks"
+      name: "Verify Audit Log Entry Created"
+      description: "Check audit log for occupied count reconciliation event"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/storage-units/{storageUnitName}/audit-log"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify audit log"
+
+rollback:
+  enabled: false
+
+warnings:
+  - "Reconciling occupied count may update storage unit statistics. Please review pre-checks carefully."
+
+metadata:
+  author: "Connect Lims Team"
+  lastModified: "2025-01-13"
+  tags: ["storage-management", "reconcile", "admin"]
