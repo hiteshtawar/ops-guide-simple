@@ -118,6 +118,11 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       expectedResponse: "cancelled"
+      verification:
+        expectedFields:
+          status: "Canceled"
+      stepResponseMessage: "Case status is \"{status}\""
+      stepResponseErrorMessage: "Case cancellation verification failed for {case_id} and the current status is {status}"
       errorHandling:
         onFailure: "alert"
         message: "Case cancellation verification failed for {case_id}"
@@ -140,6 +145,15 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "caseId"
+          - "status"
+          - "modifiedBy"
+        expectedFields:
+          caseId: "{case_id}"
+          status: "Canceled"
+      stepResponseMessage: "Audit Log entry was created by {modifiedBy} for {caseId} and status was changed to {status}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify audit log"

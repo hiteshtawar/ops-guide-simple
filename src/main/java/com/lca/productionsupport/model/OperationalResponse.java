@@ -99,6 +99,22 @@ public class OperationalResponse {
         private String expectedResponse;
         
         /**
+         * Verification configuration for API response
+         */
+        private Map<String, String> verificationExpectedFields; // Field name -> expected value
+        private List<String> verificationRequiredFields; // Fields that must be present
+        
+        /**
+         * Template message for stepResponse when verification passes (e.g., "Audit Log entry was created by {modifiedBy} for {caseId} and status was changed to {status}")
+         */
+        private String stepResponseMessage;
+        
+        /**
+         * Template message for stepResponse when verification fails (e.g., "Case cancellation verification failed for {case_id} and the current status is {status}")
+         */
+        private String stepResponseErrorMessage;
+        
+        /**
          * Whether this step can be auto-executed
          */
         private Boolean autoExecutable;

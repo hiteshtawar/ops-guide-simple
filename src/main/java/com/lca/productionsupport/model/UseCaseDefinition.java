@@ -87,6 +87,15 @@ public class UseCaseDefinition {
         private boolean optional;
         private String expectedResponse;
         private String localMessage;
+        private VerificationConfig verification; // Configuration for verifying API response and generating stepResponse
+        private String stepResponseMessage; // Template message for stepResponse when verification passes (e.g., "Audit Log entry was created by {modifiedBy} for {caseId} and status was changed to {status}")
+        private String stepResponseErrorMessage; // Template message for stepResponse when verification fails (e.g., "Case cancellation verification failed for {case_id} and the current status is {status}")
+    }
+    
+    @Data
+    public static class VerificationConfig {
+        private Map<String, String> expectedFields; // Field name -> expected value (supports placeholders like {case_id})
+        private List<String> requiredFields; // Fields that must be present in response
     }
 
     @Data

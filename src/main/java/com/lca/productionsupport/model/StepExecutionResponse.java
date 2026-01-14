@@ -50,6 +50,11 @@ public class StepExecutionResponse {
     private String apiErrorMessage;
     
     /**
+     * Step response message generated from verification (e.g., "Audit Log entry was created by user123 for caseId 2025123P6732 and status was changed to canceled")
+     */
+    private String stepResponse;
+    
+    /**
      * Time taken in milliseconds
      */
     private Long durationMs;

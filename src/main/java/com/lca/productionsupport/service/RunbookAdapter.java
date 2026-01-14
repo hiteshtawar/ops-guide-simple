@@ -142,6 +142,32 @@ public class RunbookAdapter {
             }
         }
         
+        // Handle verification config and stepResponseMessage
+        Map<String, String> verificationExpectedFields = null;
+        List<String> verificationRequiredFields = null;
+        String stepResponseMessage = null;
+        
+        if (step.getVerification() != null) {
+            if (step.getVerification().getExpectedFields() != null) {
+                verificationExpectedFields = new java.util.HashMap<>();
+                for (Map.Entry<String, String> entry : step.getVerification().getExpectedFields().entrySet()) {
+                    // Resolve placeholders in expected values (e.g., {case_id} -> actual value)
+                    String expectedValue = replacePlaceholders(entry.getValue(), entities);
+                    verificationExpectedFields.put(entry.getKey(), expectedValue);
+                }
+            }
+            verificationRequiredFields = step.getVerification().getRequiredFields();
+        }
+        
+        if (step.getStepResponseMessage() != null) {
+            stepResponseMessage = step.getStepResponseMessage();
+        }
+        
+        String stepResponseErrorMessage = null;
+        if (step.getStepResponseErrorMessage() != null) {
+            stepResponseErrorMessage = step.getStepResponseErrorMessage();
+        }
+        
         return RunbookStep.builder()
                 .stepNumber(step.getStepNumber())
                 .name(step.getName())
@@ -153,6 +179,10 @@ public class RunbookAdapter {
                 .autoExecutable(step.isAutoExecutable())
                 .stepType(step.getStepType())
                 .headers(processedHeaders)
+                .verificationExpectedFields(verificationExpectedFields)
+                .verificationRequiredFields(verificationRequiredFields)
+                .stepResponseMessage(stepResponseMessage)
+                .stepResponseErrorMessage(stepResponseErrorMessage)
                 .build();
     }
     

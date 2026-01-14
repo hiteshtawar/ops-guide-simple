@@ -121,12 +121,19 @@ public class StepExecutionService {
             
             long duration = System.currentTimeMillis() - startTime;
             
+            // Verify response and generate stepResponse if verification config exists
+            String stepResponse = null;
+            if (step.getVerificationExpectedFields() != null || step.getVerificationRequiredFields() != null) {
+                stepResponse = verifyAndGenerateStepResponse(responseBody, step, request.getEntities());
+            }
+            
             return StepExecutionResponse.builder()
                 .success(true)
                 .stepNumber(request.getStepNumber())
                 .stepDescription(step.getDescription())
                 .statusCode(200)
                 .responseBody(responseBody)
+                .stepResponse(stepResponse)
                 .durationMs(duration)
                 .build();
                 
@@ -460,6 +467,219 @@ public class StepExecutionService {
         }
         
         return null;
+    }
+    
+    /**
+     * Verify API response against expected fields and generate stepResponse message
+     * Returns the generated message if verification passes, null otherwise
+     */
+    String verifyAndGenerateStepResponse(String responseBody, RunbookStep step, Map<String, String> entities) {
+        if (responseBody == null || responseBody.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Try to parse as JSON first
+            JsonNode jsonNode = null;
+            boolean isPlainString = false;
+            String plainStringValue = null;
+            
+            try {
+                jsonNode = objectMapper.readTree(responseBody);
+                // Check if it's a plain string (not an object or array)
+                if (jsonNode.isTextual()) {
+                    isPlainString = true;
+                    plainStringValue = jsonNode.asText();
+                }
+            } catch (Exception e) {
+                // If parsing fails, check if it looks like a simple string value
+                // (not JSON object/array syntax)
+                String trimmed = responseBody.trim();
+                // If it doesn't start with { or [ and is not empty, treat as plain string
+                if (!trimmed.startsWith("{") && !trimmed.startsWith("[") && !trimmed.isEmpty()) {
+                    isPlainString = true;
+                    plainStringValue = trimmed;
+                    // Remove surrounding quotes if present
+                    if (plainStringValue.startsWith("\"") && plainStringValue.endsWith("\"")) {
+                        plainStringValue = plainStringValue.substring(1, plainStringValue.length() - 1);
+                    }
+                } else {
+                    // Invalid JSON that looks like it should be JSON, return null
+                    log.debug("Response body appears to be invalid JSON: {}", responseBody);
+                    return null;
+                }
+            }
+            
+            // Handle plain string response
+            if (isPlainString && plainStringValue != null) {
+                // For plain string, if we have expectedFields, use the first expected field
+                if (step.getVerificationExpectedFields() != null && !step.getVerificationExpectedFields().isEmpty()) {
+                    Map.Entry<String, String> firstExpected = step.getVerificationExpectedFields().entrySet().iterator().next();
+                    String fieldName = firstExpected.getKey();
+                    String expectedValue = firstExpected.getValue();
+                    
+                    // Compare plain string value with expected value (case-insensitive)
+                    if (!plainStringValue.equalsIgnoreCase(expectedValue)) {
+                        log.warn("Plain string mismatch: expected '{}', got '{}'", expectedValue, plainStringValue);
+                        // Generate error message if template exists
+                        if (step.getStepResponseErrorMessage() != null) {
+                            String errorMsg = step.getStepResponseErrorMessage();
+                            errorMsg = errorMsg.replace("{" + fieldName + "}", plainStringValue);
+                            errorMsg = errorMsg.replace("{statusString}", plainStringValue);
+                            if (entities != null) {
+                                for (Map.Entry<String, String> entry : entities.entrySet()) {
+                                    errorMsg = errorMsg.replace("{" + entry.getKey() + "}", entry.getValue());
+                                }
+                            }
+                            return errorMsg;
+                        }
+                        return null;
+                    }
+                }
+                
+                // Generate success message from template
+                if (step.getStepResponseMessage() != null) {
+                    String template = step.getStepResponseMessage();
+                    String stepResponse = template;
+                    
+                    // Replace {status} or the first expected field name with the plain string value
+                    if (step.getVerificationExpectedFields() != null && !step.getVerificationExpectedFields().isEmpty()) {
+                        String fieldName = step.getVerificationExpectedFields().keySet().iterator().next();
+                        stepResponse = stepResponse.replace("{" + fieldName + "}", plainStringValue);
+                        stepResponse = stepResponse.replace("{statusString}", plainStringValue);
+                    } else {
+                        // Default to "status" if no expected fields defined
+                        stepResponse = stepResponse.replace("{status}", plainStringValue);
+                        stepResponse = stepResponse.replace("{statusString}", plainStringValue);
+                    }
+                    
+                    // Replace any remaining entity placeholders
+                    if (entities != null) {
+                        for (Map.Entry<String, String> entry : entities.entrySet()) {
+                            stepResponse = stepResponse.replace("{" + entry.getKey() + "}", entry.getValue());
+                        }
+                    }
+                    
+                    return stepResponse;
+                }
+                
+                return null;
+            }
+            
+            // Handle JSON object response (original logic)
+            if (jsonNode != null && jsonNode.isObject()) {
+                // Verify required fields are present
+                if (step.getVerificationRequiredFields() != null) {
+                    for (String requiredField : step.getVerificationRequiredFields()) {
+                        if (!jsonNode.has(requiredField)) {
+                            log.warn("Required field '{}' not found in response", requiredField);
+                            // If error message template exists, generate error message
+                            if (step.getStepResponseErrorMessage() != null) {
+                                return generateErrorMessageFromTemplate(step.getStepResponseErrorMessage(), jsonNode, entities);
+                            }
+                            return null;
+                        }
+                    }
+                }
+                
+                // Verify expected fields match
+                if (step.getVerificationExpectedFields() != null) {
+                    for (Map.Entry<String, String> entry : step.getVerificationExpectedFields().entrySet()) {
+                        String fieldName = entry.getKey();
+                        String expectedValue = entry.getValue();
+                        
+                        if (!jsonNode.has(fieldName)) {
+                            log.warn("Expected field '{}' not found in response", fieldName);
+                            // If error message template exists, generate error message
+                            if (step.getStepResponseErrorMessage() != null) {
+                                return generateErrorMessageFromTemplate(step.getStepResponseErrorMessage(), jsonNode, entities);
+                            }
+                            return null;
+                        }
+                        
+                        String actualValue = jsonNode.get(fieldName).asText();
+                        // Use case-insensitive comparison for status and other text fields
+                        if (!actualValue.equalsIgnoreCase(expectedValue)) {
+                            log.warn("Field '{}' mismatch: expected '{}', got '{}'", fieldName, expectedValue, actualValue);
+                            // If error message template exists, generate error message with actual value
+                            if (step.getStepResponseErrorMessage() != null) {
+                                return generateErrorMessageFromTemplate(step.getStepResponseErrorMessage(), jsonNode, entities);
+                            }
+                            return null;
+                        }
+                    }
+                }
+                
+                // Generate stepResponse from template using actual values from response (verification passed)
+                if (step.getStepResponseMessage() != null) {
+                    String template = step.getStepResponseMessage();
+                    String stepResponse = template;
+                    
+                    // Replace placeholders with actual values from JSON response
+                    // Extract all fields from JSON response for template replacement
+                    java.util.Iterator<String> fieldNames = jsonNode.fieldNames();
+                    while (fieldNames.hasNext()) {
+                        String fieldName = fieldNames.next();
+                        JsonNode fieldValue = jsonNode.get(fieldName);
+                        if (fieldValue.isTextual()) {
+                            String value = fieldValue.asText();
+                            stepResponse = stepResponse.replace("{" + fieldName + "}", value);
+                        } else if (fieldValue.isNumber() || fieldValue.isBoolean()) {
+                            String value = fieldValue.asText();
+                            stepResponse = stepResponse.replace("{" + fieldName + "}", value);
+                        }
+                    }
+                    
+                    // Replace any remaining entity placeholders (e.g., {case_id})
+                    if (entities != null) {
+                        for (Map.Entry<String, String> entry : entities.entrySet()) {
+                            stepResponse = stepResponse.replace("{" + entry.getKey() + "}", entry.getValue());
+                        }
+                    }
+                    
+                    return stepResponse;
+                }
+            }
+            
+        } catch (Exception e) {
+            log.debug("Could not verify response or generate stepResponse: {}", responseBody, e);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Generate error message from template when verification fails
+     */
+    private String generateErrorMessageFromTemplate(String template, JsonNode jsonNode, Map<String, String> entities) {
+        String errorMessage = template;
+        
+        // Replace placeholders with actual values from JSON response
+        java.util.Iterator<String> fieldNames = jsonNode.fieldNames();
+        while (fieldNames.hasNext()) {
+            String fieldName = fieldNames.next();
+            JsonNode fieldValue = jsonNode.get(fieldName);
+            if (fieldValue.isTextual()) {
+                String value = fieldValue.asText();
+                errorMessage = errorMessage.replace("{" + fieldName + "}", value);
+                // Also support {statusString} as alias for {status}
+                if ("status".equals(fieldName)) {
+                    errorMessage = errorMessage.replace("{statusString}", value);
+                }
+            } else if (fieldValue.isNumber() || fieldValue.isBoolean()) {
+                String value = fieldValue.asText();
+                errorMessage = errorMessage.replace("{" + fieldName + "}", value);
+            }
+        }
+        
+        // Replace any remaining entity placeholders (e.g., {case_id})
+        if (entities != null) {
+            for (Map.Entry<String, String> entry : entities.entrySet()) {
+                errorMessage = errorMessage.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
+        }
+        
+        return errorMessage;
     }
 }
 
