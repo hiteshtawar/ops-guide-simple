@@ -789,5 +789,100 @@ class RunbookAdapterTest {
         
         return useCase;
     }
+
+    @Test
+    void convertStep_withVerificationConfig_mapsAllFields() {
+        // Test that verification configuration is fully mapped
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_VERIFY");
+        info.setName("Test");
+        info.setDownstreamService("test-service");
+        useCase.setUseCase(info);
+
+        UseCaseDefinition.StepDefinition stepDef = new UseCaseDefinition.StepDefinition();
+        stepDef.setStepNumber(1);
+        stepDef.setName("Verify");
+        stepDef.setStepType("postchecks");
+        stepDef.setMethod("GET");
+        stepDef.setPath("/api/{case_id}");
+        stepDef.setAutoExecutable(true);
+
+        UseCaseDefinition.VerificationConfig verification = new UseCaseDefinition.VerificationConfig();
+        verification.setRequiredFields(List.of("status"));
+        verification.setExpectedFields(Map.of("status", "Canceled", "caseId", "{case_id}"));
+        stepDef.setVerification(verification);
+        stepDef.setStepResponseMessage("Success: {status}");
+        stepDef.setStepResponseErrorMessage("Error: {status}");
+
+        UseCaseDefinition.ExecutionConfig executionConfig = new UseCaseDefinition.ExecutionConfig();
+        executionConfig.setSteps(List.of(stepDef));
+        useCase.setExecution(executionConfig);
+
+        Map<String, String> entities = Map.of("case_id", "2025123P6732");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+
+        OperationalResponse.RunbookStep step = response.getSteps().getPostchecks().get(0);
+        assertNotNull(step.getVerificationRequiredFields());
+        assertNotNull(step.getVerificationExpectedFields());
+        assertEquals("2025123P6732", step.getVerificationExpectedFields().get("caseId"));
+        assertEquals("Success: {status}", step.getStepResponseMessage());
+        assertEquals("Error: {status}", step.getStepResponseErrorMessage());
+    }
+
+    @Test
+    void convertStep_withNullVerification_doesNotSetVerificationFields() {
+        // Test that null verification doesn't set verification fields
+        UseCaseDefinition useCase = createBasicUseCase();
+        
+        // Add a step to the use case
+        UseCaseDefinition.StepDefinition stepDef = new UseCaseDefinition.StepDefinition();
+        stepDef.setStepNumber(1);
+        stepDef.setName("Test Step");
+        stepDef.setStepType("procedure");
+        stepDef.setMethod("GET");
+        stepDef.setPath("/api/test");
+        stepDef.setAutoExecutable(true);
+        stepDef.setVerification(null);
+        
+        useCase.getExecution().getSteps().add(stepDef);
+
+        Map<String, String> entities = Map.of("case_id", "123");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+
+        OperationalResponse.RunbookStep step = response.getSteps().getProcedure().get(0);
+        assertNull(step.getVerificationRequiredFields());
+        assertNull(step.getVerificationExpectedFields());
+    }
+
+    @Test
+    void convertStep_withEmptyExpectedFieldsMap_handlesGracefully() {
+        // Test verification with empty expectedFields map
+        UseCaseDefinition useCase = createBasicUseCase();
+        
+        // Add a step to the use case
+        UseCaseDefinition.StepDefinition stepDef = new UseCaseDefinition.StepDefinition();
+        stepDef.setStepNumber(1);
+        stepDef.setName("Test Step");
+        stepDef.setStepType("procedure");
+        stepDef.setMethod("GET");
+        stepDef.setPath("/api/test");
+        stepDef.setAutoExecutable(true);
+        
+        UseCaseDefinition.VerificationConfig verification = new UseCaseDefinition.VerificationConfig();
+        verification.setRequiredFields(List.of("status"));
+        verification.setExpectedFields(Map.of()); // Empty map
+        stepDef.setVerification(verification);
+        
+        useCase.getExecution().getSteps().add(stepDef);
+
+        Map<String, String> entities = Map.of("case_id", "123");
+        OperationalResponse response = adapter.toOperationalResponse(useCase, entities);
+
+        OperationalResponse.RunbookStep step = response.getSteps().getProcedure().get(0);
+        assertNotNull(step.getVerificationRequiredFields());
+        assertNotNull(step.getVerificationExpectedFields());
+        assertTrue(step.getVerificationExpectedFields().isEmpty());
+    }
 }
 
