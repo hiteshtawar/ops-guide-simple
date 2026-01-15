@@ -506,5 +506,45 @@ class RunbookEntityExtractorTest {
         Map<String, String> result2 = extractor.extract("cancel case 2025251T115466", config);
         assertEquals("2025251T115466", result2.get("case_id"));
     }
+
+    @Test
+    void extract_barcode_withBracketsInStatusQuery_extractsCorrectBarcode() {
+        // Test that barcode is extracted correctly when query has brackets and contains the word "status"
+        // Reproduces issue where "status" was being extracted instead of actual barcode
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        
+        UseCaseDefinition.EntityConfig barcodeConfig = new UseCaseDefinition.EntityConfig();
+        barcodeConfig.setPatterns(List.of(
+            "for\\s+\\[?([A-Za-z0-9\\-_]{4,50})\\]?\\s+to",
+            "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Za-z0-9\\-_]{4,50})",
+            "barcode\\s+([A-Za-z0-9\\-_]{4,50})",
+            "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Za-z0-9\\-_]{4,50})",
+            "\\b([A-Za-z0-9]+[\\-_][A-Za-z0-9\\-_]{3,48})\\b"
+        ));
+        barcodeConfig.setRequired(true);
+        
+        UseCaseDefinition.EntityConfig statusConfig = new UseCaseDefinition.EntityConfig();
+        statusConfig.setPatterns(List.of(
+            "to\\s+\\[?((?:Ready\\s+for|Completed|Hold|In\\s+Process|Canceled|Not\\s+Returned|Microtomy\\s+-\\s+Complete)(?:\\s*-\\s*[A-Za-z\\s]+)?)\\]?"
+        ));
+        statusConfig.setRequired(true);
+        
+        config.setEntities(Map.of(
+            "barcode", barcodeConfig,
+            "sampleStatus", statusConfig
+        ));
+        
+        // Test with bracketed barcode
+        Map<String, String> result = extractor.extract("Update sample status for [2025270P286133-A_1] to [Completed - Grossing]", config);
+        
+        assertNotNull(result.get("barcode"), "Barcode should be extracted");
+        assertEquals("2025270P286133-A_1", result.get("barcode"), "Should extract correct barcode, not 'status'");
+        assertEquals("Completed - Grossing", result.get("sampleStatus"));
+        
+        // Test without brackets
+        Map<String, String> result2 = extractor.extract("Update sample status for 2025270P286133-A_1 to Completed - Grossing", config);
+        assertEquals("2025270P286133-A_1", result2.get("barcode"));
+        assertEquals("Completed - Grossing", result2.get("sampleStatus"));
+    }
 }
 
