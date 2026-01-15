@@ -1854,4 +1854,262 @@ class StepExecutionServiceTest {
         assertNotNull(result);
         assertEquals("Case status is \"Canceled\"", result);
     }
+
+    @Test
+    void executeStep_withEntityValidation_validValue_returnsSuccess() {
+        // Test entity validation step with valid enum value
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2) // Step 2 is entity validation
+            .entities(Map.of("sampleStatus", "Completed - Grossing"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertTrue(response.getSuccess());
+        assertEquals(2, response.getStepNumber());
+        assertNotNull(response.getStepResponse());
+        assertTrue(response.getStepResponse().contains("Completed - Grossing"));
+        assertTrue(response.getStepResponse().contains("valid"));
+    }
+
+    @Test
+    void executeStep_withEntityValidation_invalidValue_returnsFailure() {
+        // Test entity validation step with invalid enum value
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2) // Step 2 is entity validation
+            .entities(Map.of("sampleStatus", "Invalid Status"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(2, response.getStepNumber());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("Invalid status provided"));
+        assertTrue(response.getErrorMessage().contains("Invalid Status"));
+        assertNotNull(response.getStepResponse());
+        assertEquals(response.getErrorMessage(), response.getStepResponse());
+    }
+
+    @Test
+    void executeStep_withEntityValidation_caseInsensitive_returnsSuccess() {
+        // Test entity validation is case-insensitive
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of("sampleStatus", "completed - grossing")) // lowercase
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertTrue(response.getSuccess());
+        assertNotNull(response.getStepResponse());
+    }
+
+    @Test
+    void executeStep_withEntityValidation_missingEntity_returnsFailure() {
+        // Test entity validation with missing entity
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of("barcode", "BC123456")) // Missing sampleStatus
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("sampleStatus"));
+    }
+
+    @Test
+    void executeStep_withEntityValidation_nullEntities_returnsFailure() {
+        // Test entity validation with null entities map
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(null)
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertNotNull(response.getErrorMessage());
+    }
+
+    @Test
+    void executeStep_withEntityValidation_withPlaceholdersInMessages_replacesCorrectly() {
+        // Test that placeholders in success/error messages are replaced
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of("sampleStatus", "Completed - Grossing", "barcode", "BC123456"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertTrue(response.getSuccess());
+        assertNotNull(response.getStepResponse());
+        // Should contain the actual status value
+        assertTrue(response.getStepResponse().contains("Completed - Grossing"));
+        // Should NOT contain unreplaced placeholders
+        assertFalse(response.getStepResponse().contains("{sampleStatus}"));
+    }
+
+    @Test
+    void replacePlaceholdersInMessage_withPrimaryAndFallbackValues_usesCorrectOrder() {
+        // Test the replacePlaceholdersInMessage logic indirectly through validation
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of(
+                "sampleStatus", "Completed - Grossing",
+                "barcode", "BC123456"
+            ))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertTrue(response.getSuccess());
+        // Both placeholders should be replaced
+        assertNotNull(response.getStepResponse());
+        assertTrue(response.getStepResponse().contains("Completed - Grossing"));
+    }
+
+    @Test
+    void executeStep_localMessage_returnsSuccess() {
+        // Test LOCAL_MESSAGE step type
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(3) // Step 3 is LOCAL_MESSAGE
+            .entities(Map.of("sampleStatus", "Completed - Grossing"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertTrue(response.getSuccess());
+        assertEquals(3, response.getStepNumber());
+        assertNotNull(response.getResponseBody());
+        assertTrue(response.getResponseBody().contains("Completed - Grossing"));
+    }
+
+    @Test
+    void executeStep_withEntityValidation_invalidTaskId_returnsFailure() {
+        // Test validation with invalid task ID (use case not found)
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("INVALID_TASK_ID")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("sampleStatus", "Completed - Grossing"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        // Should fail with step not found error
+        assertNotNull(response.getErrorMessage());
+    }
+
+    @Test
+    void generateErrorMessageFromTemplate_withVariousPlaceholders_replacesAll() {
+        // Test error message generation indirectly through invalid validation
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of(
+                "sampleStatus", "Invalid Status", 
+                "barcode", "BC123456"
+            ))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertNotNull(response.getStepResponse());
+        // Error message should contain the actual invalid value
+        assertTrue(response.getStepResponse().contains("Invalid Status"));
+    }
+
+    @Test
+    void executeStep_headerCheck_withMatchingRole_succeeds() {
+        // Test HEADER_CHECK validation
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(1) // Step 1 is HEADER_CHECK
+            .entities(Map.of("sampleStatus", "Completed - Grossing"))
+            .userId("user123")
+            .userRole("Production Support")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertTrue(response.getSuccess());
+        assertEquals(1, response.getStepNumber());
+    }
+
+    @Test
+    void executeStep_headerCheck_withMismatchedRole_fails() {
+        // Test HEADER_CHECK validation failure
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(1) // Step 1 is HEADER_CHECK
+            .entities(Map.of("sampleStatus", "Completed - Grossing"))
+            .userId("user123")
+            .userRole("Regular User") // Wrong role
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(1, response.getStepNumber());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("Production Support"));
+    }
 }
