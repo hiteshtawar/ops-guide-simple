@@ -71,6 +71,8 @@ public class StepExecutionService {
                 return executeLocalMessage(request, step, startTime);
             } else if (method == StepMethod.HEADER_CHECK) {
                 return executeHeaderCheck(request, step, startTime);
+            } else if (method == StepMethod.ENTITY_VALIDATION) {
+                return executeEntityValidation(request, step, startTime);
             }
         }
         
@@ -176,6 +178,125 @@ public class StepExecutionService {
             .responseBody("{\"message\": \"" + message + "\"}")
             .durationMs(duration)
             .build();
+    }
+    
+    /**
+     * Execute entity validation check without making downstream API call
+     */
+    private StepExecutionResponse executeEntityValidation(StepExecutionRequest request, RunbookStep step, long startTime) {
+        String entityName = step.getPath();  // Entity name to validate stored in path field
+        String stepResponseMessage = step.getStepResponseMessage();  // Success message template
+        String stepResponseErrorMessage = step.getStepResponseErrorMessage();  // Error message template
+        
+        log.info("Executing entity validation: entity={}", entityName);
+        
+        // Get the use case definition to access validation rules
+        UseCaseDefinition useCaseDef = runbookRegistry.getUseCase(request.getTaskId());
+        if (useCaseDef == null) {
+            long duration = System.currentTimeMillis() - startTime;
+            return StepExecutionResponse.builder()
+                .success(false)
+                .stepNumber(request.getStepNumber())
+                .stepDescription(step.getDescription())
+                .statusCode(500)
+                .errorMessage("Use case definition not found for taskId: " + request.getTaskId())
+                .durationMs(duration)
+                .build();
+        }
+        
+        // Get the entity config
+        UseCaseDefinition.EntityConfig entityConfig = null;
+        if (useCaseDef.getExtraction() != null && useCaseDef.getExtraction().getEntities() != null) {
+            entityConfig = useCaseDef.getExtraction().getEntities().get(entityName);
+        }
+        
+        if (entityConfig == null || entityConfig.getValidation() == null) {
+            long duration = System.currentTimeMillis() - startTime;
+            return StepExecutionResponse.builder()
+                .success(false)
+                .stepNumber(request.getStepNumber())
+                .stepDescription(step.getDescription())
+                .statusCode(500)
+                .errorMessage("No validation configuration found for entity: " + entityName)
+                .durationMs(duration)
+                .build();
+        }
+        
+        // Get the actual value from entities
+        String actualValue = request.getEntities() != null ? request.getEntities().get(entityName) : null;
+        if (actualValue == null) {
+            long duration = System.currentTimeMillis() - startTime;
+            return StepExecutionResponse.builder()
+                .success(false)
+                .stepNumber(request.getStepNumber())
+                .stepDescription(step.getDescription())
+                .statusCode(400)
+                .errorMessage("Required entity '" + entityName + "' not provided")
+                .durationMs(duration)
+                .build();
+        }
+        
+        // Validate the entity value
+        UseCaseDefinition.ValidationConfig validation = entityConfig.getValidation();
+        boolean isValid = true;
+        String validationError = null;
+        
+        // Check enum values
+        if (validation.getEnumValues() != null && !validation.getEnumValues().isEmpty()) {
+            boolean matchesEnum = validation.getEnumValues().stream()
+                .anyMatch(enumVal -> enumVal.equalsIgnoreCase(actualValue));
+            
+            if (!matchesEnum) {
+                isValid = false;
+                validationError = validation.getErrorMessage() != null 
+                    ? validation.getErrorMessage() 
+                    : "Invalid " + entityName + " provided: '" + actualValue + "'. Allowed values: " + validation.getEnumValues();
+            }
+        }
+        
+        // Check regex if defined
+        if (isValid && validation.getRegex() != null) {
+            if (!actualValue.matches(validation.getRegex())) {
+                isValid = false;
+                validationError = validation.getErrorMessage() != null 
+                    ? validation.getErrorMessage() 
+                    : "Value '" + actualValue + "' does not match required pattern";
+            }
+        }
+        
+        long duration = System.currentTimeMillis() - startTime;
+        
+        if (isValid) {
+            // Generate success message from template
+            String successMessage = stepResponseMessage != null 
+                ? replacePlaceholdersInMessage(stepResponseMessage, Map.of(entityName, actualValue), request.getEntities())
+                : entityName + " '" + actualValue + "' is valid";
+            
+            return StepExecutionResponse.builder()
+                .success(true)
+                .stepNumber(request.getStepNumber())
+                .stepDescription(step.getDescription())
+                .statusCode(200)
+                .responseBody("{\"valid\": true, \"" + entityName + "\": \"" + actualValue + "\"}")
+                .stepResponse(successMessage)
+                .durationMs(duration)
+                .build();
+        } else {
+            // Generate error message from template
+            String errorMessage = stepResponseErrorMessage != null 
+                ? replacePlaceholdersInMessage(stepResponseErrorMessage, Map.of(entityName, actualValue), request.getEntities())
+                : validationError;
+            
+            return StepExecutionResponse.builder()
+                .success(false)
+                .stepNumber(request.getStepNumber())
+                .stepDescription(step.getDescription())
+                .statusCode(400)
+                .errorMessage(errorMessage)
+                .stepResponse(errorMessage)
+                .durationMs(duration)
+                .build();
+        }
     }
     
     /**
@@ -680,6 +801,33 @@ public class StepExecutionService {
         }
         
         return errorMessage;
+    }
+    
+    /**
+     * Replace placeholders in message template with actual values
+     */
+    private String replacePlaceholdersInMessage(String template, Map<String, String> primaryValues, Map<String, String> fallbackValues) {
+        if (template == null) {
+            return null;
+        }
+        
+        String message = template;
+        
+        // Replace with primary values first
+        if (primaryValues != null) {
+            for (Map.Entry<String, String> entry : primaryValues.entrySet()) {
+                message = message.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
+        }
+        
+        // Replace any remaining placeholders with fallback values
+        if (fallbackValues != null) {
+            for (Map.Entry<String, String> entry : fallbackValues.entrySet()) {
+                message = message.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
+        }
+        
+        return message;
     }
 }
 

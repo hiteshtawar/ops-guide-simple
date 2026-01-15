@@ -121,6 +121,19 @@ execution:
     
     - stepNumber: 2
       stepType: "prechecks"
+      name: "Validate Sample Status"
+      description: "Verify that the provided sample status is valid"
+      autoExecutable: true
+      method: "ENTITY_VALIDATION"
+      path: "sampleStatus"
+      stepResponseMessage: "Sample status '{sampleStatus}' is valid"
+      stepResponseErrorMessage: "Invalid status provided: '{sampleStatus}'. Please provide a valid sample status from the allowed list."
+      errorHandling:
+        onFailure: "abort"
+        message: "Sample status validation failed"
+    
+    - stepNumber: 3
+      stepType: "prechecks"
       name: "Preview Status Update Impact"
       description: "Display impact message to user"
       autoExecutable: true
@@ -131,7 +144,7 @@ execution:
     
     # ==================== PROCEDURE ====================
     
-    - stepNumber: 3
+    - stepNumber: 4
       stepType: "procedure"
       name: "Execute Sample Status Update"
       description: "Update the sample status in the system"
@@ -158,7 +171,7 @@ execution:
     
     # ==================== POSTCHECKS ====================
     
-    - stepNumber: 4
+    - stepNumber: 5
       stepType: "postchecks"
       name: "Verify Sample Status Updated"
       description: "Confirm sample status is now {sampleStatus}"
@@ -180,7 +193,7 @@ execution:
         onFailure: "alert"
         message: "Sample status verification failed for {barcode}"
     
-    - stepNumber: 5
+    - stepNumber: 6
       stepType: "postchecks"
       name: "Verify Audit Log Entry Created"
       description: "Check audit log for status update event"

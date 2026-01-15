@@ -15,6 +15,11 @@ public enum StepMethod {
     HEADER_CHECK,
     
     /**
+     * Local execution: Validates extracted entities against their validation rules
+     */
+    ENTITY_VALIDATION,
+    
+    /**
      * Downstream execution: HTTP GET request
      */
     GET,
@@ -43,7 +48,7 @@ public enum StepMethod {
      * Check if this method is a local execution (doesn't require downstream service)
      */
     public boolean isLocalExecution() {
-        return this == LOCAL_MESSAGE || this == HEADER_CHECK;
+        return this == LOCAL_MESSAGE || this == HEADER_CHECK || this == ENTITY_VALIDATION;
     }
     
     /**

@@ -1329,7 +1329,7 @@ class StepExecutionServiceTest {
         StepExecutionRequest request = StepExecutionRequest.builder()
             .taskId("UPDATE_SAMPLE_STATUS")
             .downstreamService("ap-services")
-            .stepNumber(3) // Step 3 has path with {barcode}
+            .stepNumber(4) // Step 4 has path with {barcode} (was step 3, now shifted)
             .entities(Map.of("sampleStatus", "Completed - Grossing")) // Missing barcode
             .userId("user123")
             .authToken("token")
@@ -1339,7 +1339,7 @@ class StepExecutionServiceTest {
 
         assertNotNull(response);
         assertFalse(response.getSuccess());
-        assertEquals(3, response.getStepNumber());
+        assertEquals(4, response.getStepNumber());
         assertNotNull(response.getErrorMessage());
         assertTrue(response.getResponseBody().contains("barcode") || 
                    response.getErrorMessage().contains("barcode") ||
@@ -1353,7 +1353,7 @@ class StepExecutionServiceTest {
         StepExecutionRequest request = StepExecutionRequest.builder()
             .taskId("UPDATE_SAMPLE_STATUS")
             .downstreamService("ap-services")
-            .stepNumber(3) // Step 3 has body with {sampleStatus}
+            .stepNumber(4) // Step 4 has body with {sampleStatus} (was step 3, now shifted)
             .entities(Map.of("barcode", "BC123456")) // Missing sampleStatus
             .userId("user123")
             .authToken("token")
@@ -1363,7 +1363,7 @@ class StepExecutionServiceTest {
 
         assertNotNull(response);
         assertFalse(response.getSuccess());
-        assertEquals(3, response.getStepNumber());
+        assertEquals(4, response.getStepNumber());
         assertNotNull(response.getErrorMessage());
     }
 
@@ -1400,7 +1400,7 @@ class StepExecutionServiceTest {
         StepExecutionRequest request = StepExecutionRequest.builder()
             .taskId("UPDATE_SAMPLE_STATUS")
             .downstreamService("ap-services")
-            .stepNumber(3) // Step 3 has {barcode} in path
+            .stepNumber(4) // Step 4 has {barcode} in path (was step 3, now shifted)
             .entities(null) // Null entities
             .userId("user123")
             .authToken("token")
@@ -1410,7 +1410,7 @@ class StepExecutionServiceTest {
 
         assertNotNull(response);
         assertFalse(response.getSuccess());
-        assertEquals(3, response.getStepNumber());
+        assertEquals(4, response.getStepNumber());
         assertNotNull(response.getErrorMessage());
     }
 
