@@ -1,0 +1,214 @@
+useCase:
+  id: "UPDATE_SAMPLE_BARCODE"
+  name: "Update Sample Barcode"
+  description: "Update the barcode for a sample from old barcode to new barcode"
+  category: "sample-management"
+  version: "1.0"
+  downstreamService: "ap-services"
+  exampleQuery: "Update sample barcode from [old_barcode] to [new_barcode]"
+
+classification:
+  keywords:
+    - "update sample barcode"
+    - "update barcode"
+    - "change sample barcode"
+    - "change barcode"
+    - "rename sample barcode"
+    - "rename barcode"
+    - "modify sample barcode"
+    - "modify barcode"
+  synonyms:
+    update: ["change", "modify", "rename", "set"]
+    sample: ["slide", "container", "block", "specimen"]
+    barcode: ["barcode id", "barcode number", "sample id", "sample number"]
+  minConfidence: 1.0
+  requiredEntities:
+    - oldBarcode
+    - newBarcode
+
+extraction:
+  entities:
+    oldBarcode:
+      type: "string"
+      patterns:
+        - "from\\s+\\[?([A-Za-z0-9\\-_]{4,50})\\]?\\s+to" # "from [barcode] to" or "from barcode to"
+        - "barcode\\s+from\\s+([A-Za-z0-9\\-_]{4,50})"
+        - "old\\s+barcode\\s+([A-Za-z0-9\\-_]{4,50})"
+        - "current\\s+barcode\\s+([A-Za-z0-9\\-_]{4,50})"
+      required: true
+      validation:
+        regex: "^[A-Za-z0-9\\-_]{4,50}$"
+        errorMessage: "Old barcode must be alphanumeric with optional hyphens/underscores (4-50 characters)"
+    
+    newBarcode:
+      type: "string"
+      patterns:
+        - "to\\s+\\[?([A-Za-z0-9\\-_]{4,50})\\]?(?:\\s|$)" # "to [barcode]" or "to barcode"
+        - "new\\s+barcode\\s+([A-Za-z0-9\\-_]{4,50})"
+        - "barcode\\s+to\\s+([A-Za-z0-9\\-_]{4,50})"
+      required: true
+      validation:
+        regex: "^[A-Za-z0-9\\-_]{4,50}$"
+        errorMessage: "New barcode must be alphanumeric with optional hyphens/underscores (4-50 characters)"
+
+execution:
+  timeout: 30
+  retryPolicy:
+    maxAttempts: 3
+    backoffMs: 1000
+  
+  steps:
+    # ==================== PRECHECKS ====================
+    
+    - stepNumber: 1
+      stepType: "prechecks"
+      name: "Verify User Has Update Permission"
+      description: "Check if user has Production Support role"
+      autoExecutable: true
+      method: "HEADER_CHECK"
+      path: "Role-Name"
+      expectedResponse: "Production Support"
+      errorHandling:
+        onFailure: "abort"
+        message: "User does not have required role for barcode update"
+    
+    - stepNumber: 2
+      stepType: "prechecks"
+      name: "Validate Old Barcode Format"
+      description: "Verify that the old barcode format is valid"
+      autoExecutable: true
+      method: "ENTITY_VALIDATION"
+      path: "oldBarcode"
+      stepResponseMessage: "Old barcode '{oldBarcode}' format is valid"
+      stepResponseErrorMessage: "Invalid old barcode format: '{oldBarcode}'"
+      errorHandling:
+        onFailure: "abort"
+        message: "Old barcode validation failed"
+    
+    - stepNumber: 3
+      stepType: "prechecks"
+      name: "Validate New Barcode Format"
+      description: "Verify that the new barcode format is valid"
+      autoExecutable: true
+      method: "ENTITY_VALIDATION"
+      path: "newBarcode"
+      stepResponseMessage: "New barcode '{newBarcode}' format is valid"
+      stepResponseErrorMessage: "Invalid new barcode format: '{newBarcode}'"
+      errorHandling:
+        onFailure: "abort"
+        message: "New barcode validation failed"
+    
+    - stepNumber: 4
+      stepType: "prechecks"
+      name: "Preview Barcode Update Impact"
+      description: "Display impact message to user"
+      autoExecutable: true
+      method: "LOCAL_MESSAGE"
+      localMessage: "Sample barcode will be updated from {oldBarcode} to {newBarcode}. This will affect all references to this sample."
+      errorHandling:
+        onFailure: "continue"
+    
+    # ==================== PROCEDURE ====================
+    
+    - stepNumber: 5
+      stepType: "procedure"
+      name: "Execute Barcode Update"
+      description: "Update the sample barcode in the system"
+      autoExecutable: false
+      method: "PATCH"
+      path: "/lims-api/samples/{oldBarcode}/barcode"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+        X-Idempotency-Key: "{IDEMPOTENCY_KEY}"
+        Content-Type: "application/json"
+      body:
+        newBarcode: "{newBarcode}"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "abort"
+        message: "Failed to update sample barcode from {oldBarcode} to {newBarcode}"
+    
+    # ==================== POSTCHECKS ====================
+    
+    - stepNumber: 6
+      stepType: "postchecks"
+      name: "Verify Barcode Updated Successfully"
+      description: "Confirm sample barcode is now updated"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/samples/{newBarcode}"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 200
+      errorHandling:
+        onFailure: "alert"
+        message: "Barcode update verification failed for {newBarcode}"
+    
+    - stepNumber: 7
+      stepType: "postchecks"
+      name: "Verify Old Barcode No Longer Exists"
+      description: "Confirm old barcode is no longer in the system"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/samples/{oldBarcode}"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 404
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify old barcode removal"
+    
+    - stepNumber: 8
+      stepType: "postchecks"
+      name: "Verify Audit Log Entry Created"
+      description: "Check audit log for barcode update event"
+      autoExecutable: true
+      method: "GET"
+      path: "/lims-api/samples/{newBarcode}/audit-log"
+      headers:
+        Api-User: "{api_user}"
+        Lab-Id: "{lab_id}"
+        Discipline-Name: "{discipline_name}"
+        Time-Zone: "{time_zone}"
+        Role-Name: "{role_name}"
+        accept: "application/json"
+        Authorization: "Bearer {token}"
+        X-User-ID: "{user_id}"
+      expectedStatus: 200
+      optional: true
+      errorHandling:
+        onFailure: "continue"
+        message: "Could not verify audit log"
+
+rollback:
+  enabled: false
+
+warnings:
+  - "Barcode updates may affect references in other systems. Please verify dependencies before proceeding."
+
+metadata:
+  author: "Connect Lims Team"
+  lastModified: "2025-01-15"
+  tags: ["sample-management", "barcode-update", "data-management"]
