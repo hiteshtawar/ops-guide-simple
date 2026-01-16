@@ -29,10 +29,11 @@ extraction:
     barcode:
       type: "string"
       patterns:
+        - "(?:sample|slide|container|block)\\s+\\[?([A-Za-z0-9\\-_]{4,50})\\]?\\s+to" # "for slide [barcode] to" or "for slide barcode to"
         - "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Za-z0-9\\-_]{4,50})" # Alphanumeric barcode with hyphens/underscores
         - "barcode\\s+([A-Za-z0-9\\-_]{4,50})"
         - "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Za-z0-9\\-_]{4,50})" # "for slide 2025195T116127-A_1_6"
-        - "([A-Za-z0-9\\-_]{4,50})" # Standalone barcode
+        - "\\b([A-Za-z0-9]+[\\-_][A-Za-z0-9\\-_]{3,48})\\b" # Barcode with hyphen or underscore (more specific)
       required: true
       validation:
         regex: "^[A-Za-z0-9\\-_]{4,50}$"
@@ -41,11 +42,11 @@ extraction:
     stainName:
       type: "string"
       patterns:
-        - "to\\s+([A-Za-z0-9\\s\\.\\-]+)" # "to Unstained", "to Eosin", "to T. Pallidum"
-        - "stain\\s+name\\s+to\\s+([A-Za-z0-9\\s\\.\\-]+)"
-        - "stain\\s+to\\s+([A-Za-z0-9\\s\\.\\-]+)"
-        - "as\\s+([A-Za-z0-9\\s\\.\\-]+)" # "as Unstained"
-        - "([A-Za-z0-9\\s\\.\\-]+)(?:\\s+stain)?" # Standalone stain name
+        - "to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?$" # "to [stain name]" at end of query
+        - "to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?(?:\\s*$)" # "to [stain name]" with optional whitespace at end
+        - "stain\\s+name\\s+to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?"
+        - "stain\\s+to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?"
+        - "as\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?" # "as Unstained"
       required: true
       validation:
         regex: "^[A-Za-z0-9\\s\\.\\-]{1,100}$"

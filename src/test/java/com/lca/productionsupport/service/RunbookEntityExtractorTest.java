@@ -578,5 +578,55 @@ class RunbookEntityExtractorTest {
         Map<String, String> result3 = extractor.extract("Clear storage unit [CS-FORAZ85449-1]", config);
         assertEquals("CS-FORAZ85449-1", result3.get("storageUnitName"));
     }
+
+    @Test
+    void extract_stainName_withBracketsAndBarcode_extractsCorrectly() {
+        // Test that stain name and barcode are extracted correctly
+        // Reproduces issue where wrong parts were being extracted
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        
+        UseCaseDefinition.EntityConfig barcodeConfig = new UseCaseDefinition.EntityConfig();
+        barcodeConfig.setPatterns(List.of(
+            "(?:sample|slide|container|block)\\s+\\[?([A-Za-z0-9\\-_]{4,50})\\]?\\s+to",
+            "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Za-z0-9\\-_]{4,50})",
+            "barcode\\s+([A-Za-z0-9\\-_]{4,50})",
+            "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Za-z0-9\\-_]{4,50})",
+            "\\b([A-Za-z0-9]+[\\-_][A-Za-z0-9\\-_]{3,48})\\b"
+        ));
+        barcodeConfig.setRequired(true);
+        
+        UseCaseDefinition.EntityConfig stainNameConfig = new UseCaseDefinition.EntityConfig();
+        stainNameConfig.setPatterns(List.of(
+            "to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?$",
+            "to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?(?:\\s*$)",
+            "stain\\s+name\\s+to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?",
+            "stain\\s+to\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?",
+            "as\\s+\\[?([A-Za-z0-9\\s\\.\\-]+?)\\]?"
+        ));
+        stainNameConfig.setRequired(true);
+        
+        config.setEntities(Map.of(
+            "barcode", barcodeConfig,
+            "stainName", stainNameConfig
+        ));
+        
+        // Test with bracketed values
+        Map<String, String> result = extractor.extract("Update stain name for slide [2025195T116127-A_1_6] to [Eosin]", config);
+        
+        assertNotNull(result.get("barcode"), "Barcode should be extracted");
+        assertEquals("2025195T116127-A_1_6", result.get("barcode"), "Should extract correct barcode");
+        assertNotNull(result.get("stainName"), "Stain name should be extracted");
+        assertEquals("Eosin", result.get("stainName"), "Should extract correct stain name");
+        
+        // Test without brackets
+        Map<String, String> result2 = extractor.extract("Update stain name for slide 2025195T116127-A_1_6 to Eosin", config);
+        assertEquals("2025195T116127-A_1_6", result2.get("barcode"));
+        assertEquals("Eosin", result2.get("stainName"));
+        
+        // Test with stain name containing spaces and dots
+        Map<String, String> result3 = extractor.extract("Update stain name for slide [BC123] to [H. Pylori]", config);
+        assertEquals("BC123", result3.get("barcode"));
+        assertEquals("H. Pylori", result3.get("stainName"));
+    }
 }
 
