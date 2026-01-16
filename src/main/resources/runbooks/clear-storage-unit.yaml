@@ -25,10 +25,9 @@ extraction:
     storageUnitName:
       type: "string"
       patterns:
-        - "storage\\s+unit\\s+([A-Za-z0-9\\-_\\s]+)" # "storage unit NAME"
-        - "unit\\s+([A-Za-z0-9\\-_\\s]+)" # "unit NAME"
-        - "storage\\s+([A-Za-z0-9\\-_\\s]+)" # "storage NAME"
-        - "([A-Za-z0-9\\-_\\s]+)" # Standalone storage unit name
+        - "storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "storage unit [NAME]" or "storage unit NAME"
+        - "unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "unit [NAME]"
+        - "\\b([A-Z]{2,}-[A-Z0-9\\-_]+)\\b" # Pattern like CS-FORAZ85449-1 (caps with hyphens)
       required: true
       validation:
         regex: "^[A-Za-z0-9\\-_\\s]{1,100}$"

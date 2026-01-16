@@ -546,5 +546,37 @@ class RunbookEntityExtractorTest {
         assertEquals("2025270P286133-A_1", result2.get("barcode"));
         assertEquals("Completed - Grossing", result2.get("sampleStatus"));
     }
+
+    @Test
+    void extract_storageUnitName_withBracketsAndHyphens_extractsCorrectly() {
+        // Test that storage unit name is extracted correctly (not just "unit")
+        // Reproduces issue where "unit" was being extracted instead of actual storage unit name
+        UseCaseDefinition.ExtractionConfig config = new UseCaseDefinition.ExtractionConfig();
+        
+        UseCaseDefinition.EntityConfig storageUnitConfig = new UseCaseDefinition.EntityConfig();
+        storageUnitConfig.setPatterns(List.of(
+            "for\\s+storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)",
+            "storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)",
+            "unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)",
+            "\\b([A-Z]{2,}-[A-Z0-9\\-_]+)\\b"
+        ));
+        storageUnitConfig.setRequired(true);
+        
+        config.setEntities(Map.of("storageUnitName", storageUnitConfig));
+        
+        // Test with bracketed storage unit name
+        Map<String, String> result = extractor.extract("Reconcile occupied count for storage unit [CS-FORAZ85449-1]", config);
+        
+        assertNotNull(result.get("storageUnitName"), "Storage unit name should be extracted");
+        assertEquals("CS-FORAZ85449-1", result.get("storageUnitName"), "Should extract correct storage unit name, not 'unit'");
+        
+        // Test without brackets
+        Map<String, String> result2 = extractor.extract("Reconcile occupied count for storage unit CS-FORAZ85449-1", config);
+        assertEquals("CS-FORAZ85449-1", result2.get("storageUnitName"));
+        
+        // Test with "clear" operation
+        Map<String, String> result3 = extractor.extract("Clear storage unit [CS-FORAZ85449-1]", config);
+        assertEquals("CS-FORAZ85449-1", result3.get("storageUnitName"));
+    }
 }
 

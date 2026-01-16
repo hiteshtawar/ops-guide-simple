@@ -26,11 +26,10 @@ extraction:
     storageUnitName:
       type: "string"
       patterns:
-        - "storage\\s+unit\\s+([A-Za-z0-9\\-_\\s]+)" # "storage unit NAME"
-        - "unit\\s+([A-Za-z0-9\\-_\\s]+)" # "unit NAME"
-        - "storage\\s+([A-Za-z0-9\\-_\\s]+)" # "storage NAME"
-        - "for\\s+storage\\s+unit\\s+([A-Za-z0-9\\-_\\s]+)" # "for storage unit NAME"
-        - "([A-Za-z0-9\\-_\\s]+)" # Standalone storage unit name
+        - "for\\s+storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "for storage unit [NAME]" or "for storage unit NAME"
+        - "storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "storage unit [NAME]"
+        - "unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "unit [NAME]"
+        - "\\b([A-Z]{2,}-[A-Z0-9\\-_]+)\\b" # Pattern like CS-FORAZ85449-1 (caps with hyphens)
       required: true
       validation:
         regex: "^[A-Za-z0-9\\-_\\s]{1,100}$"
@@ -75,7 +74,7 @@ execution:
       description: "Reconcile and update the occupied count in the system"
       autoExecutable: false
       method: "PATCH"
-      path: "/lims-api/storage-units/{storageUnitName}/occupiedCount"
+      path: "/lims-api/storageUnits/{storageUnitName}/occupiedCount"
       headers:
         Api-User: "{api_user}"
         Lab-Id: "{lab_id}"
@@ -100,7 +99,7 @@ execution:
       description: "Confirm occupied count has been reconciled"
       autoExecutable: true
       method: "GET"
-      path: "/lims-api/storage-units/{storageUnitName}"
+      path: "/lims-api/storageUnits/{storageUnitName}"
       headers:
         Api-User: "{api_user}"
         Lab-Id: "{lab_id}"
@@ -122,7 +121,7 @@ execution:
       description: "Check audit log for occupied count reconciliation event"
       autoExecutable: true
       method: "GET"
-      path: "/lims-api/storage-units/{storageUnitName}/audit-log"
+      path: "/lims-api/storageUnits/{storageUnitName}/audit-log"
       headers:
         Api-User: "{api_user}"
         Lab-Id: "{lab_id}"
