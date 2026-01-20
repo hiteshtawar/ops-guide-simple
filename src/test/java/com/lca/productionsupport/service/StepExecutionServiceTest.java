@@ -2979,30 +2979,6 @@ class StepExecutionServiceTest {
     }
 
     @Test
-    void executeStep_procedureStep_success_withStepResponseMessage_noVerification() {
-        // Test procedure step success path with stepResponseMessage but no verification
-        // This requires mocking the HTTP call, but we can test the logic by checking cancel-case step 3
-        // which has stepResponseMessage configured
-        StepExecutionRequest request = StepExecutionRequest.builder()
-            .taskId("CANCEL_CASE")
-            .downstreamService("ap-services")
-            .stepNumber(3)
-            .entities(Map.of("case_id", "2025123P6732"))
-            .userId("user123")
-            .authToken("token")
-            .build();
-
-        // Will fail on HTTP call, but we can verify the stepResponseErrorMessage is used on error
-        StepExecutionResponse response = stepExecutionService.executeStep(request);
-        
-        assertNotNull(response);
-        // When it fails, should use stepResponseErrorMessage from cancel-case.yaml
-        if (!response.getSuccess() && response.getStepResponse() != null) {
-            assertTrue(response.getStepResponse().contains("Failed to cancel case 2025123P6732"));
-        }
-    }
-
-    @Test
     void executeStep_procedureStep_error_withStepResponseErrorMessage_usesTemplate() {
         // Test that procedure step error uses stepResponseErrorMessage when provided
         StepExecutionRequest request = StepExecutionRequest.builder()
