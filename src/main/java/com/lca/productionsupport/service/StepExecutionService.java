@@ -252,8 +252,8 @@ public class StepExecutionService {
             String errorMessage;
             if (stepResponseErrorMessage != null) {
                 // Use stepResponseErrorMessage template, but entity is missing
-                // Replace {entityName} placeholder with "not provided"
-                errorMessage = stepResponseErrorMessage.replace("{" + entityName + "}", "not provided");
+                // Replace {entityName} placeholder with entity name + " not provided" to keep entity name in message
+                errorMessage = stepResponseErrorMessage.replace("{" + entityName + "}", entityName + " not provided");
                 // Also replace any remaining placeholders from request entities
                 if (request.getEntities() != null) {
                     errorMessage = replacePlaceholdersInMessage(errorMessage, Map.of(), request.getEntities());
