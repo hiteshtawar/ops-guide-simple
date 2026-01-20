@@ -3289,4 +3289,275 @@ class StepExecutionServiceTest {
         // The code path for stepResponseMessage without verification is covered
         // Even though it fails, the branch exists and will be executed on success
     }
+
+    // ========== Additional Entity Validation Edge Case Tests ==========
+
+    @Test
+    void executeStep_entityValidation_missingEntity_withNullStepResponseErrorMessage_usesDefault() {
+        // Test entity validation with missing entity and null stepResponseErrorMessage
+        // This tests the else branch when stepResponseErrorMessage is null (line 268-273)
+        // Also tests when request.getEntities() is not null (line 258-260)
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_MISSING_ENTITY_NULL_MSG");
+        useCase.setUseCase(info);
+        UseCaseDefinition.ClassificationConfig classification = new UseCaseDefinition.ClassificationConfig();
+        classification.setKeywords(List.of("test"));
+        useCase.setClassification(classification);
+        UseCaseDefinition.ExtractionConfig extraction = new UseCaseDefinition.ExtractionConfig();
+        Map<String, UseCaseDefinition.EntityConfig> entities = new HashMap<>();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        UseCaseDefinition.ValidationConfig validation = new UseCaseDefinition.ValidationConfig();
+        validation.setEnumValues(List.of("Value1", "Value2", "Value3"));
+        entityConfig.setValidation(validation);
+        entities.put("testEntity", entityConfig);
+        extraction.setEntities(entities);
+        useCase.setExtraction(extraction);
+        UseCaseDefinition.ExecutionConfig execution = new UseCaseDefinition.ExecutionConfig();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("ENTITY_VALIDATION");
+        step.setPath("testEntity");
+        step.setStepType("prechecks");
+        step.setStepResponseMessage(null);
+        step.setStepResponseErrorMessage(null); // Null - should use default message
+        execution.setSteps(List.of(step));
+        useCase.setExecution(execution);
+        
+        RunbookRegistry testRegistry = new RunbookRegistry() {
+            @Override
+            public UseCaseDefinition getUseCase(String id) {
+                if ("TEST_MISSING_ENTITY_NULL_MSG".equals(id)) {
+                    return useCase;
+                }
+                return super.getUseCase(id);
+            }
+        };
+        
+        StepExecutionService testService = new StepExecutionService(
+            webClientRegistry, testRegistry, runbookAdapter, errorMessageTranslator);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("TEST_MISSING_ENTITY_NULL_MSG")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("otherEntity", "value")) // Has entities but missing testEntity
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = testService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(400, response.getStatusCode());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("testEntity"));
+        assertTrue(response.getErrorMessage().contains("not provided"));
+        // Should include allowed values
+        assertTrue(response.getErrorMessage().contains("Allowed values"));
+        assertTrue(response.getErrorMessage().contains("Value1"));
+    }
+
+    @Test
+    void executeStep_entityValidation_missingEntity_withNonNullEntities_handlesCorrectly() {
+        // Test entity validation with missing entity but request.getEntities() is not null
+        // This tests line 258-260
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("UPDATE_SAMPLE_STATUS")
+            .downstreamService("ap-services")
+            .stepNumber(2)
+            .entities(Map.of("barcode", "BC123456", "otherEntity", "value")) // Has entities but missing sampleStatus
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = stepExecutionService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(400, response.getStatusCode());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("sampleStatus"));
+        // Should include allowed values (from enumValues in update-sample-status.yaml)
+        assertTrue(response.getErrorMessage().contains("Allowed values") || 
+                   response.getErrorMessage().contains("allowed list"));
+    }
+
+    @Test
+    void executeStep_entityValidation_regexValidation_fails() {
+        // Test entity validation with regex validation failure
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_REGEX_VALIDATION");
+        useCase.setUseCase(info);
+        UseCaseDefinition.ClassificationConfig classification = new UseCaseDefinition.ClassificationConfig();
+        classification.setKeywords(List.of("test"));
+        useCase.setClassification(classification);
+        UseCaseDefinition.ExtractionConfig extraction = new UseCaseDefinition.ExtractionConfig();
+        Map<String, UseCaseDefinition.EntityConfig> entities = new HashMap<>();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        UseCaseDefinition.ValidationConfig validation = new UseCaseDefinition.ValidationConfig();
+        validation.setRegex("^[A-Z]{3}$"); // Must be exactly 3 uppercase letters
+        entityConfig.setValidation(validation);
+        entities.put("testEntity", entityConfig);
+        extraction.setEntities(entities);
+        useCase.setExtraction(extraction);
+        UseCaseDefinition.ExecutionConfig execution = new UseCaseDefinition.ExecutionConfig();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("ENTITY_VALIDATION");
+        step.setPath("testEntity");
+        step.setStepType("prechecks");
+        step.setStepResponseMessage("Entity '{testEntity}' is valid");
+        step.setStepResponseErrorMessage("Invalid entity format: '{testEntity}'");
+        execution.setSteps(List.of(step));
+        useCase.setExecution(execution);
+        
+        RunbookRegistry testRegistry = new RunbookRegistry() {
+            @Override
+            public UseCaseDefinition getUseCase(String id) {
+                if ("TEST_REGEX_VALIDATION".equals(id)) {
+                    return useCase;
+                }
+                return super.getUseCase(id);
+            }
+        };
+        
+        StepExecutionService testService = new StepExecutionService(
+            webClientRegistry, testRegistry, runbookAdapter, errorMessageTranslator);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("TEST_REGEX_VALIDATION")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("testEntity", "invalid")) // Doesn't match regex
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = testService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(400, response.getStatusCode());
+        assertNotNull(response.getErrorMessage());
+        assertTrue(response.getErrorMessage().contains("invalid"));
+    }
+
+    @Test
+    void executeStep_entityValidation_enumValuesAlreadyInMessage_doesNotAppend() {
+        // Test entity validation when enumValues exist but message already contains "Allowed values"
+        // This tests line 341-343
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_ENUM_ALREADY_IN_MESSAGE");
+        useCase.setUseCase(info);
+        UseCaseDefinition.ClassificationConfig classification = new UseCaseDefinition.ClassificationConfig();
+        classification.setKeywords(List.of("test"));
+        useCase.setClassification(classification);
+        UseCaseDefinition.ExtractionConfig extraction = new UseCaseDefinition.ExtractionConfig();
+        Map<String, UseCaseDefinition.EntityConfig> entities = new HashMap<>();
+        UseCaseDefinition.EntityConfig entityConfig = new UseCaseDefinition.EntityConfig();
+        UseCaseDefinition.ValidationConfig validation = new UseCaseDefinition.ValidationConfig();
+        validation.setEnumValues(List.of("Value1", "Value2"));
+        entityConfig.setValidation(validation);
+        entities.put("testEntity", entityConfig);
+        extraction.setEntities(entities);
+        useCase.setExtraction(extraction);
+        UseCaseDefinition.ExecutionConfig execution = new UseCaseDefinition.ExecutionConfig();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("ENTITY_VALIDATION");
+        step.setPath("testEntity");
+        step.setStepType("prechecks");
+        step.setStepResponseMessage(null);
+        step.setStepResponseErrorMessage("Invalid value. Allowed values: Value1, Value2"); // Already contains "Allowed values"
+        execution.setSteps(List.of(step));
+        useCase.setExecution(execution);
+        
+        RunbookRegistry testRegistry = new RunbookRegistry() {
+            @Override
+            public UseCaseDefinition getUseCase(String id) {
+                if ("TEST_ENUM_ALREADY_IN_MESSAGE".equals(id)) {
+                    return useCase;
+                }
+                return super.getUseCase(id);
+            }
+        };
+        
+        StepExecutionService testService = new StepExecutionService(
+            webClientRegistry, testRegistry, runbookAdapter, errorMessageTranslator);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("TEST_ENUM_ALREADY_IN_MESSAGE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("testEntity", "InvalidValue"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = testService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(400, response.getStatusCode());
+        assertNotNull(response.getErrorMessage());
+        // Should not duplicate "Allowed values"
+        int count = (response.getErrorMessage().split("Allowed values", -1).length) - 1;
+        assertEquals(1, count, "Should contain 'Allowed values' only once");
+    }
+
+    @Test
+    void executeStep_entityValidation_noEntityConfig_returnsError() {
+        // Test entity validation when entityConfig is null (entity not found in extraction config)
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_NO_ENTITY_CONFIG");
+        useCase.setUseCase(info);
+        UseCaseDefinition.ClassificationConfig classification = new UseCaseDefinition.ClassificationConfig();
+        classification.setKeywords(List.of("test"));
+        useCase.setClassification(classification);
+        UseCaseDefinition.ExtractionConfig extraction = new UseCaseDefinition.ExtractionConfig();
+        extraction.setEntities(new HashMap<>()); // Empty entities map
+        useCase.setExtraction(extraction);
+        UseCaseDefinition.ExecutionConfig execution = new UseCaseDefinition.ExecutionConfig();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("ENTITY_VALIDATION");
+        step.setPath("nonExistentEntity");
+        step.setStepType("prechecks");
+        execution.setSteps(List.of(step));
+        useCase.setExecution(execution);
+        
+        RunbookRegistry testRegistry = new RunbookRegistry() {
+            @Override
+            public UseCaseDefinition getUseCase(String id) {
+                if ("TEST_NO_ENTITY_CONFIG".equals(id)) {
+                    return useCase;
+                }
+                return super.getUseCase(id);
+            }
+        };
+        
+        StepExecutionService testService = new StepExecutionService(
+            webClientRegistry, testRegistry, runbookAdapter, errorMessageTranslator);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("TEST_NO_ENTITY_CONFIG")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("nonExistentEntity", "value"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        StepExecutionResponse response = testService.executeStep(request);
+
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+        assertEquals(500, response.getStatusCode());
+        assertTrue(response.getErrorMessage().contains("No validation configuration found"));
+    }
 }
