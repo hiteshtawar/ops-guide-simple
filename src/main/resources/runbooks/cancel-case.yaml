@@ -55,6 +55,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for cancellation"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for cancellation"
@@ -66,6 +68,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "Case and it's materials will be canceled and removed from the workpool"
+      stepResponseMessage: "Case {case_id} and it's materials will be canceled and removed from the workpool"
       errorHandling:
         onFailure: "continue"
     
@@ -94,6 +97,8 @@ execution:
         notes: "Cancelled via Production Support"
         notify_stakeholders: true
       expectedStatus: 200
+      stepResponseMessage: "Case {case_id} has been successfully canceled"
+      stepResponseErrorMessage: "Failed to cancel case {case_id}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to cancel case {case_id}"

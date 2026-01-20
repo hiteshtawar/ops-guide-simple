@@ -72,7 +72,7 @@ execution:
       description: "Remove all samples from the storage unit"
       autoExecutable: false
       method: "PATCH"
-      path: "/lims-api/storage-units/{storageUnitName}/clear"
+      path: "/lims-api/storageUnits/{storageUnitName}/clear"
       headers:
         Api-User: "{api_user}"
         Lab-Id: "{lab_id}"
@@ -97,7 +97,7 @@ execution:
       description: "Confirm storage unit is now empty"
       autoExecutable: true
       method: "GET"
-      path: "/lims-api/storage-units/{storageUnitName}"
+      path: "/lims-api/storageUnits/{storageUnitName}"
       headers:
         Api-User: "{api_user}"
         Lab-Id: "{lab_id}"
@@ -119,7 +119,7 @@ execution:
       description: "Check audit log for storage unit clear event"
       autoExecutable: true
       method: "GET"
-      path: "/lims-api/storage-units/{storageUnitName}/audit-log"
+      path: "/lims-api/storageUnits/{storageUnitName}/audit-log"
       headers:
         Api-User: "{api_user}"
         Lab-Id: "{lab_id}"

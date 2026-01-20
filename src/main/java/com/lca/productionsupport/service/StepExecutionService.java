@@ -127,6 +127,9 @@ public class StepExecutionService {
             String stepResponse = null;
             if (step.getVerificationExpectedFields() != null || step.getVerificationRequiredFields() != null) {
                 stepResponse = verifyAndGenerateStepResponse(responseBody, step, request.getEntities());
+            } else if (step.getStepResponseMessage() != null) {
+                // Generate stepResponse from template if no verification but template exists
+                stepResponse = replacePlaceholdersInMessage(step.getStepResponseMessage(), Map.of(), request.getEntities());
             }
             
             return StepExecutionResponse.builder()
@@ -148,6 +151,15 @@ public class StepExecutionService {
             // Extract API error message from responseBody if available
             String apiErrorMessage = extractApiErrorMessage(translation.getTechnicalDetails());
             
+            // Generate stepResponseErrorMessage from template if provided
+            String stepResponse = null;
+            if (step.getStepResponseErrorMessage() != null) {
+                stepResponse = replacePlaceholdersInMessage(step.getStepResponseErrorMessage(), Map.of(), request.getEntities());
+            } else {
+                // Fall back to translated error message
+                stepResponse = translation.getUserFriendlyMessage();
+            }
+            
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
@@ -155,6 +167,7 @@ public class StepExecutionService {
                 .errorMessage(translation.getUserFriendlyMessage())
                 .responseBody(translation.getTechnicalDetails())
                 .apiErrorMessage(apiErrorMessage)
+                .stepResponse(stepResponse)
                 .durationMs(System.currentTimeMillis() - startTime)
                 .build();
         }
@@ -165,10 +178,16 @@ public class StepExecutionService {
      */
     private StepExecutionResponse executeLocalMessage(StepExecutionRequest request, RunbookStep step, long startTime) {
         String message = step.getRequestBody();  // Message stored in requestBody field
+        String stepResponseMessage = step.getStepResponseMessage();  // Optional stepResponseMessage template
         
         log.info("Executing local message step: {}", message);
         
         long duration = System.currentTimeMillis() - startTime;
+        
+        // Use stepResponseMessage if provided, otherwise use the localMessage
+        String stepResponse = stepResponseMessage != null
+            ? replacePlaceholdersInMessage(stepResponseMessage, Map.of(), request.getEntities())
+            : message;
         
         return StepExecutionResponse.builder()
             .success(true)
@@ -176,6 +195,7 @@ public class StepExecutionService {
             .stepDescription(step.getDescription())
             .statusCode(200)
             .responseBody("{\"message\": \"" + message + "\"}")
+            .stepResponse(stepResponse)
             .durationMs(duration)
             .build();
     }
@@ -306,6 +326,8 @@ public class StepExecutionService {
         String headerName = step.getPath();  // Header name stored in path field
         String expectedValue = step.getExpectedResponse();  // Expected value stored in expectedResponse field
         String actualValue = request.getUserRole();  // Get the actual role from request
+        String stepResponseMessage = step.getStepResponseMessage();  // Success message template
+        String stepResponseErrorMessage = step.getStepResponseErrorMessage();  // Error message template
         
         log.info("Executing header check: header={}, expected={}, actual={}", 
                 headerName, expectedValue, actualValue);
@@ -316,21 +338,33 @@ public class StepExecutionService {
         long duration = System.currentTimeMillis() - startTime;
         
         if (isValid) {
+            // Generate success message from template or use default
+            String successMessage = stepResponseMessage != null 
+                ? replacePlaceholdersInMessage(stepResponseMessage, Map.of("role", expectedValue), request.getEntities())
+                : "User has required role: " + expectedValue;
+            
             return StepExecutionResponse.builder()
                 .success(true)
                 .stepNumber(request.getStepNumber())
                 .stepDescription(step.getDescription())
                 .statusCode(200)
-                .responseBody("{\"valid\": true, \"message\": \"User has required role: " + expectedValue + "\"}")
+                .responseBody("{\"valid\": true, \"message\": \"" + successMessage + "\"}")
+                .stepResponse(successMessage)
                 .durationMs(duration)
                 .build();
         } else {
+            // Generate error message from template or use default
+            String errorMessage = stepResponseErrorMessage != null
+                ? replacePlaceholdersInMessage(stepResponseErrorMessage, Map.of("role", expectedValue, "actualRole", actualValue != null ? actualValue : "null"), request.getEntities())
+                : "Access denied: User role '" + actualValue + "' does not match required role '" + expectedValue + "'";
+            
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
                 .stepDescription(step.getDescription())
                 .statusCode(403)
-                .errorMessage("Access denied: User role '" + actualValue + "' does not match required role '" + expectedValue + "'")
+                .errorMessage(errorMessage)
+                .stepResponse(errorMessage)
                 .durationMs(duration)
                 .build();
         }

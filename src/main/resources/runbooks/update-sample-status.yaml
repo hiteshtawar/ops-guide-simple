@@ -115,6 +115,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for status update"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for status update"
@@ -139,6 +141,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "Sample status will be updated to {sampleStatus} and workpool updated. This may affect workflow progression."
+      stepResponseMessage: "Sample {barcode} status will be updated to {sampleStatus} and workpool updated. This may affect workflow progression."
       errorHandling:
         onFailure: "continue"
     
@@ -165,6 +168,8 @@ execution:
       body:
         sampleStatus: "{sampleStatus}"
       expectedStatus: 200
+      stepResponseMessage: "Sample {barcode} status has been successfully updated to {sampleStatus}"
+      stepResponseErrorMessage: "Failed to update sample status for {barcode}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to update sample status for {barcode}"
