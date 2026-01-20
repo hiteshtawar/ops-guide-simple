@@ -68,6 +68,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for workpool entry deletion"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for workpool entry deletion"
@@ -79,6 +81,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "Workpool entry '{workpoolName}' will be deleted for barcode {barcode}. This action cannot be undone."
+      stepResponseMessage: "Workpool entry {workpoolName} will be deleted for sample {barcode}. This action cannot be undone."
       errorHandling:
         onFailure: "continue"
     
@@ -102,6 +105,8 @@ execution:
         X-User-ID: "{user_id}"
         Content-Type: "application/json"
       expectedStatus: 200
+      stepResponseMessage: "Workpool entry {workpoolName} has been successfully deleted for sample {barcode}"
+      stepResponseErrorMessage: "Failed to delete workpool entry {workpoolName} for {barcode}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to delete workpool entry {workpoolName} for {barcode}"
@@ -126,6 +131,13 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "barcode"
+        expectedFields:
+          barcode: "{barcode}"
+      stepResponseMessage: "Workpool entry {workpoolName} verified as deleted for sample {barcode}"
+      stepResponseErrorMessage: "Could not verify workpool entry {workpoolName} deletion for {barcode}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify workpool entry deletion"

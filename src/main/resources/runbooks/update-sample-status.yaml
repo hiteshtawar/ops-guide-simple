@@ -194,6 +194,11 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       expectedResponse: "{sampleStatus}"
+      verification:
+        expectedFields:
+          status: "{sampleStatus}"
+      stepResponseMessage: "Sample {barcode} status is \"{status}\""
+      stepResponseErrorMessage: "Sample status verification failed for {barcode} and the current status is {status}"
       errorHandling:
         onFailure: "alert"
         message: "Sample status verification failed for {barcode}"
@@ -216,6 +221,15 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "barcode"
+          - "status"
+          - "modifiedBy"
+        expectedFields:
+          barcode: "{barcode}"
+          status: "{sampleStatus}"
+      stepResponseMessage: "Audit Log entry was created by {modifiedBy} for sample {barcode} and status was changed to {status}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify audit log"

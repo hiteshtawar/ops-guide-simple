@@ -52,6 +52,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for storage unit reconciliation"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for storage unit reconciliation"
@@ -63,6 +65,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "Occupied count will be reconciled and updated for storage unit '{storageUnitName}'. This may correct mismatched counts."
+      stepResponseMessage: "Occupied count will be reconciled and updated for storage unit {storageUnitName}. This may correct mismatched counts."
       errorHandling:
         onFailure: "continue"
     
@@ -87,6 +90,8 @@ execution:
         X-Idempotency-Key: "{IDEMPOTENCY_KEY}"
         Content-Type: "application/json"
       expectedStatus: 200
+      stepResponseMessage: "Occupied count has been successfully reconciled for storage unit {storageUnitName}"
+      stepResponseErrorMessage: "Failed to reconcile occupied count for storage unit {storageUnitName}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to reconcile occupied count for storage unit {storageUnitName}"
@@ -111,6 +116,14 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "storageUnitName"
+          - "occupiedCount"
+        expectedFields:
+          storageUnitName: "{storageUnitName}"
+      stepResponseMessage: "Storage unit {storageUnitName} occupied count verified as {occupiedCount}"
+      stepResponseErrorMessage: "Could not verify occupied count reconciliation for storage unit {storageUnitName}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify occupied count reconciliation"
@@ -133,6 +146,13 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "storageUnitName"
+          - "modifiedBy"
+        expectedFields:
+          storageUnitName: "{storageUnitName}"
+      stepResponseMessage: "Audit Log entry was created by {modifiedBy} for storage unit {storageUnitName} occupied count reconciliation"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify audit log"

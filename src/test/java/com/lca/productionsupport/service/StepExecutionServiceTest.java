@@ -3148,7 +3148,7 @@ class StepExecutionServiceTest {
         UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
         step.setStepNumber(1);
         step.setMethod("LOCAL_MESSAGE");
-        step.setRequestBody("Test local message without stepResponseMessage");
+        step.setLocalMessage("Test local message without stepResponseMessage");
         step.setStepType("prechecks");
         step.setStepResponseMessage(null); // No template - should use localMessage
         execution.setSteps(List.of(step));

@@ -68,6 +68,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for barcode update"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for barcode update"
@@ -105,6 +107,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "Sample barcode will be updated from {oldBarcode} to {newBarcode}. This will affect all references to this sample."
+      stepResponseMessage: "Sample barcode will be updated from {oldBarcode} to {newBarcode}. This will affect all references to this sample."
       errorHandling:
         onFailure: "continue"
     
@@ -131,6 +134,8 @@ execution:
       body:
         newBarcode: "{newBarcode}"
       expectedStatus: 200
+      stepResponseMessage: "Sample barcode has been successfully updated from {oldBarcode} to {newBarcode}"
+      stepResponseErrorMessage: "Failed to update sample barcode from {oldBarcode} to {newBarcode}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to update sample barcode from {oldBarcode} to {newBarcode}"
@@ -154,6 +159,13 @@ execution:
         Authorization: "Bearer {token}"
         X-User-ID: "{user_id}"
       expectedStatus: 200
+      verification:
+        requiredFields:
+          - "barcode"
+        expectedFields:
+          barcode: "{newBarcode}"
+      stepResponseMessage: "Sample barcode {newBarcode} verified successfully"
+      stepResponseErrorMessage: "Barcode update verification failed for {newBarcode}"
       errorHandling:
         onFailure: "alert"
         message: "Barcode update verification failed for {newBarcode}"
@@ -198,6 +210,13 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "barcode"
+          - "modifiedBy"
+        expectedFields:
+          barcode: "{newBarcode}"
+      stepResponseMessage: "Audit Log entry was created by {modifiedBy} for sample barcode update from {oldBarcode} to {newBarcode}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify audit log"

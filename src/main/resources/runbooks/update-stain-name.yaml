@@ -69,6 +69,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for stain name update"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for stain name update"
@@ -80,6 +82,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "Stain name will be updated to {stainName} for barcode {barcode}. This may affect downstream processes."
+      stepResponseMessage: "Stain name will be updated to {stainName} for sample {barcode}. This may affect downstream processes."
       errorHandling:
         onFailure: "continue"
     
@@ -106,6 +109,8 @@ execution:
       body:
         stainName: "{stainName}"
       expectedStatus: 200
+      stepResponseMessage: "Stain name has been successfully updated to {stainName} for sample {barcode}"
+      stepResponseErrorMessage: "Failed to update stain name for {barcode}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to update stain name for {barcode}"
@@ -130,6 +135,11 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       expectedResponse: "{stainName}"
+      verification:
+        expectedFields:
+          stainName: "{stainName}"
+      stepResponseMessage: "Sample {barcode} stain name is \"{stainName}\""
+      stepResponseErrorMessage: "Stain name verification failed for {barcode} and the current stain name is {stainName}"
       errorHandling:
         onFailure: "alert"
         message: "Stain name verification failed for {barcode}"
@@ -152,6 +162,15 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "barcode"
+          - "stainName"
+          - "modifiedBy"
+        expectedFields:
+          barcode: "{barcode}"
+          stainName: "{stainName}"
+      stepResponseMessage: "Audit Log entry was created by {modifiedBy} for sample {barcode} and stain name was changed to {stainName}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify audit log"

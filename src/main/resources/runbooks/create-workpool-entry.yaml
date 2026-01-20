@@ -68,6 +68,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for workpool entry creation"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for workpool entry creation"
@@ -79,6 +81,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "Workpool entry '{workpoolName}' will be created for barcode {barcode}. This may affect workflow progression."
+      stepResponseMessage: "Workpool entry {workpoolName} will be created for sample {barcode}. This may affect workflow progression."
       errorHandling:
         onFailure: "continue"
     
@@ -105,6 +108,8 @@ execution:
       body:
         workpoolName: "{workpoolName}"
       expectedStatus: 201
+      stepResponseMessage: "Workpool entry {workpoolName} has been successfully created for sample {barcode}"
+      stepResponseErrorMessage: "Failed to create workpool entry {workpoolName} for {barcode}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to create workpool entry {workpoolName} for {barcode}"
@@ -129,6 +134,15 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "barcode"
+          - "workpoolName"
+        expectedFields:
+          barcode: "{barcode}"
+          workpoolName: "{workpoolName}"
+      stepResponseMessage: "Workpool entry {workpoolName} verified for sample {barcode}"
+      stepResponseErrorMessage: "Could not verify workpool entry {workpoolName} creation for {barcode}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify workpool entry creation"
@@ -151,6 +165,15 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "barcode"
+          - "workpoolName"
+          - "modifiedBy"
+        expectedFields:
+          barcode: "{barcode}"
+          workpoolName: "{workpoolName}"
+      stepResponseMessage: "Audit Log entry was created by {modifiedBy} for workpool entry {workpoolName} creation for sample {barcode}"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify audit log"

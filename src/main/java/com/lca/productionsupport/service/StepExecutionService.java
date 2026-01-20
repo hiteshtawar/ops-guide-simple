@@ -246,12 +246,40 @@ public class StepExecutionService {
         String actualValue = request.getEntities() != null ? request.getEntities().get(entityName) : null;
         if (actualValue == null) {
             long duration = System.currentTimeMillis() - startTime;
+            
+            // Build error message with allowed values if available
+            UseCaseDefinition.ValidationConfig validation = entityConfig.getValidation();
+            String errorMessage;
+            if (stepResponseErrorMessage != null) {
+                // Use stepResponseErrorMessage template, but entity is missing
+                // Replace {entityName} placeholder with "not provided"
+                errorMessage = stepResponseErrorMessage.replace("{" + entityName + "}", "not provided");
+                // Also replace any remaining placeholders from request entities
+                if (request.getEntities() != null) {
+                    errorMessage = replacePlaceholdersInMessage(errorMessage, Map.of(), request.getEntities());
+                }
+                // Append allowed values if enumValues exist
+                if (validation != null && validation.getEnumValues() != null && !validation.getEnumValues().isEmpty()) {
+                    String allowedValuesList = String.join(", ", validation.getEnumValues());
+                    if (!errorMessage.contains("Allowed values") && !errorMessage.contains("allowed list")) {
+                        errorMessage += " Allowed values: " + allowedValuesList;
+                    }
+                }
+            } else {
+                errorMessage = "Required entity '" + entityName + "' not provided";
+                // Append allowed values if enumValues exist
+                if (validation != null && validation.getEnumValues() != null && !validation.getEnumValues().isEmpty()) {
+                    errorMessage += ". Allowed values: " + String.join(", ", validation.getEnumValues());
+                }
+            }
+            
             return StepExecutionResponse.builder()
                 .success(false)
                 .stepNumber(request.getStepNumber())
                 .stepDescription(step.getDescription())
                 .statusCode(400)
-                .errorMessage("Required entity '" + entityName + "' not provided")
+                .errorMessage(errorMessage)
+                .stepResponse(errorMessage)
                 .durationMs(duration)
                 .build();
         }
@@ -306,6 +334,14 @@ public class StepExecutionService {
             String errorMessage = stepResponseErrorMessage != null 
                 ? replacePlaceholdersInMessage(stepResponseErrorMessage, Map.of(entityName, actualValue), request.getEntities())
                 : validationError;
+            
+            // Append allowed values list if enumValues exist and not already in message
+            if (validation.getEnumValues() != null && !validation.getEnumValues().isEmpty()) {
+                String allowedValuesList = String.join(", ", validation.getEnumValues());
+                if (!errorMessage.contains("Allowed values") && !errorMessage.contains("allowed list")) {
+                    errorMessage += " Allowed values: " + allowedValuesList;
+                }
+            }
             
             return StepExecutionResponse.builder()
                 .success(false)

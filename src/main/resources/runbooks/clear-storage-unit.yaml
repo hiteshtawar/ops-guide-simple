@@ -50,6 +50,8 @@ execution:
       method: "HEADER_CHECK"
       path: "Role-Name"
       expectedResponse: "Production Support"
+      stepResponseMessage: "User has sufficient privileges to perform this action: '{role}'"
+      stepResponseErrorMessage: "User does not have required role for storage unit clearing"
       errorHandling:
         onFailure: "abort"
         message: "User does not have required role for storage unit clearing"
@@ -61,6 +63,7 @@ execution:
       autoExecutable: true
       method: "LOCAL_MESSAGE"
       localMessage: "All samples will be removed from storage unit '{storageUnitName}'. This action cannot be undone."
+      stepResponseMessage: "All samples will be removed from storage unit {storageUnitName}. This action cannot be undone."
       errorHandling:
         onFailure: "continue"
     
@@ -85,6 +88,8 @@ execution:
         X-Idempotency-Key: "{IDEMPOTENCY_KEY}"
         Content-Type: "application/json"
       expectedStatus: 200
+      stepResponseMessage: "Storage unit {storageUnitName} has been successfully cleared"
+      stepResponseErrorMessage: "Failed to clear storage unit {storageUnitName}"
       errorHandling:
         onFailure: "abort"
         message: "Failed to clear storage unit {storageUnitName}"
@@ -109,6 +114,13 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "storageUnitName"
+        expectedFields:
+          storageUnitName: "{storageUnitName}"
+      stepResponseMessage: "Storage unit {storageUnitName} verified as cleared"
+      stepResponseErrorMessage: "Could not verify storage unit {storageUnitName} clear"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify storage unit clear"
@@ -131,6 +143,13 @@ execution:
         X-User-ID: "{user_id}"
       expectedStatus: 200
       optional: true
+      verification:
+        requiredFields:
+          - "storageUnitName"
+          - "modifiedBy"
+        expectedFields:
+          storageUnitName: "{storageUnitName}"
+      stepResponseMessage: "Audit Log entry was created by {modifiedBy} for storage unit {storageUnitName} clear operation"
       errorHandling:
         onFailure: "continue"
         message: "Could not verify audit log"
