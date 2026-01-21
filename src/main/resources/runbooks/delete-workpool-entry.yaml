@@ -157,13 +157,14 @@ execution:
         accept: "application/json"
         Authorization: "Bearer {token}"
         X-User-ID: "{user_id}"
-      expectedStatus: 200
+        Content-Type: "application/json"
+      body:
+        workpoolName: "{workpoolName}"
+        labCode: "{labCode}"
+      expectedStatus: 404
       optional: true
       verification:
-        requiredFields:
-          - "barcode"
-        expectedFields:
-          barcode: "{barcode}"
+        requiredFields: []
       stepResponseMessage: "Workpool entry {workpoolName} verified as deleted for sample {barcode}"
       stepResponseErrorMessage: "Could not verify workpool entry {workpoolName} deletion for {barcode}"
       errorHandling:

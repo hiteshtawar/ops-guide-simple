@@ -159,6 +159,10 @@ execution:
         accept: "application/json"
         Authorization: "Bearer {token}"
         X-User-ID: "{user_id}"
+        Content-Type: "application/json"
+      body:
+        workpoolName: "{workpoolName}"
+        labCode: "{labCode}"
       expectedStatus: 200
       optional: true
       verification:
@@ -180,7 +184,7 @@ execution:
       description: "Check audit log for workpool entry creation event"
       autoExecutable: true
       method: "GET"
-      path: "/lims-api/samples/{barcode}/audit-log"
+      path: "/lims-api/samples/{barcode}/workpool/audit-log"
       headers:
         Api-User: "{api_user}"
         Lab-Id: "{lab_id}"
