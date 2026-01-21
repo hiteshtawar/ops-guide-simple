@@ -94,7 +94,8 @@ execution:
       description: "Validate that all required entities are provided"
       autoExecutable: true
       method: "ENTITY_VALIDATION"
-      entityName: "labCode"
+      path: "labCode"
+      stepResponseMessage: "Lab code '{labCode}' is valid"
       stepResponseErrorMessage: "Required entity {labCode} not provided"
       errorHandling:
         onFailure: "abort"
