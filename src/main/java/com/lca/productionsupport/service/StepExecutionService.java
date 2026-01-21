@@ -255,15 +255,22 @@ public class StepExecutionService {
                 // Replace {entityName} placeholder with entity name + " not provided" to keep entity name in message
                 errorMessage = stepResponseErrorMessage.replace("{" + entityName + "}", entityName + " not provided");
                 // Also replace any remaining placeholders from request entities
-                if (request.getEntities() != null) {
-                    errorMessage = replacePlaceholdersInMessage(errorMessage, Map.of(), request.getEntities());
+                if (errorMessage != null && request.getEntities() != null) {
+                    String replaced = replacePlaceholdersInMessage(errorMessage, Map.of(), request.getEntities());
+                    if (replaced != null) {
+                        errorMessage = replaced;
+                    }
                 }
                 // Append allowed values if enumValues exist
-                if (validation != null && validation.getEnumValues() != null && !validation.getEnumValues().isEmpty()) {
+                if (errorMessage != null && validation != null && validation.getEnumValues() != null && !validation.getEnumValues().isEmpty()) {
                     String allowedValuesList = String.join(", ", validation.getEnumValues());
                     if (!errorMessage.contains("Allowed values") && !errorMessage.contains("allowed list")) {
                         errorMessage += " Allowed values: " + allowedValuesList;
                     }
+                }
+                // Ensure errorMessage is not null after all processing
+                if (errorMessage == null) {
+                    errorMessage = "Required entity '" + entityName + "' not provided";
                 }
             } else {
                 errorMessage = "Required entity '" + entityName + "' not provided";
