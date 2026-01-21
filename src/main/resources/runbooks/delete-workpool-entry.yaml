@@ -5,7 +5,7 @@ useCase:
   category: "sample-management"
   version: "1.0"
   downstreamService: "ap-services"
-  exampleQuery: "Delete workpool entry [workpool_name] for sample [sample_barcode]"
+  exampleQuery: "Delete workpool entry [workpool_name] for sample [sample_barcode] with lab code [lab_code]"
 
 classification:
   keywords:
@@ -22,6 +22,7 @@ classification:
   requiredEntities:
     - barcode
     - workpoolName
+    - labCode
 
 extraction:
   entities:
@@ -50,6 +51,19 @@ extraction:
       validation:
         regex: "^[A-Za-z0-9\\-_\\s]{1,100}$"
         errorMessage: "Workpool name must be alphanumeric with optional hyphens, underscores, or spaces (1-100 characters)"
+    
+    labCode:
+      type: "string"
+      patterns:
+        - "lab\\s+code\\s+([A-Za-z0-9\\-_]{2,20})" # "lab code ABC123"
+        - "lab\\s+([A-Za-z0-9\\-_]{2,20})" # "lab ABC123"
+        - "code\\s+([A-Za-z0-9\\-_]{2,20})" # "code ABC123"
+        - "\\b([A-Z]{2,10})\\b" # Standalone uppercase lab code (2-10 chars)
+        - "\\b([A-Za-z0-9]{2,20})\\b" # Standalone alphanumeric code
+      required: true
+      validation:
+        regex: "^[A-Za-z0-9\\-_]{2,20}$"
+        errorMessage: "Lab code must be alphanumeric with optional hyphens/underscores (2-20 characters)"
 
 execution:
   timeout: 30
@@ -76,6 +90,18 @@ execution:
     
     - stepNumber: 2
       stepType: "prechecks"
+      name: "Validate Required Entities"
+      description: "Validate that all required entities are provided"
+      autoExecutable: true
+      method: "ENTITY_VALIDATION"
+      entityName: "labCode"
+      stepResponseErrorMessage: "Required entity {labCode} not provided"
+      errorHandling:
+        onFailure: "abort"
+        message: "Lab code is required for workpool entry deletion"
+    
+    - stepNumber: 3
+      stepType: "prechecks"
       name: "Preview Workpool Entry Deletion Impact"
       description: "Display impact message to user"
       autoExecutable: true
@@ -87,7 +113,7 @@ execution:
     
     # ==================== PROCEDURE ====================
     
-    - stepNumber: 3
+    - stepNumber: 4
       stepType: "procedure"
       name: "Execute Workpool Entry Deletion"
       description: "Delete the workpool entry in the system"
@@ -104,6 +130,8 @@ execution:
         Authorization: "Bearer {token}"
         X-User-ID: "{user_id}"
         Content-Type: "application/json"
+      body:
+        labCode: "{labCode}"
       expectedStatus: 200
       stepResponseMessage: "Workpool entry {workpoolName} has been successfully deleted for sample {barcode}"
       stepResponseErrorMessage: "Failed to delete workpool entry {workpoolName} for {barcode}"
@@ -113,7 +141,7 @@ execution:
     
     # ==================== POSTCHECKS ====================
     
-    - stepNumber: 4
+    - stepNumber: 5
       stepType: "postchecks"
       name: "Verify Workpool Entry Deleted"
       description: "Confirm workpool entry is no longer present"
