@@ -45,6 +45,7 @@ class ProductionSupportControllerIntegrationTest {
             .andExpect(jsonPath("$[0].taskId").exists())
             .andExpect(jsonPath("$[0].taskName").exists())
             .andExpect(jsonPath("$[0].description").exists());
+        // Note: validInputs is optional and may be present for tasks with enumValues
     }
 
     // ========== Process Request Tests ==========
