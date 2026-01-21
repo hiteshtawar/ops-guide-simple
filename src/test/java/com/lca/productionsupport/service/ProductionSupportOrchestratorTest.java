@@ -303,7 +303,7 @@ class ProductionSupportOrchestratorTest {
 
     @Test
     void getAvailableTasks_returnsAllTasks() {
-        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
 
         assertNotNull(tasks);
         assertTrue(tasks.size() > 0);
@@ -315,9 +315,9 @@ class ProductionSupportOrchestratorTest {
 
     @Test
     void getAvailableTasks_hasRequiredFields() {
-        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
 
-        for (Map<String, String> task : tasks) {
+        for (Map<String, Object> task : tasks) {
             assertNotNull(task.get("taskId"));
             assertNotNull(task.get("taskName"));
             assertNotNull(task.get("description"));
@@ -326,42 +326,42 @@ class ProductionSupportOrchestratorTest {
 
     @Test
     void getAvailableTasks_cancelCaseHasCorrectFields() {
-        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
 
-        Optional<Map<String, String>> cancelTask = tasks.stream()
+        Optional<Map<String, Object>> cancelTask = tasks.stream()
             .filter(t -> "CANCEL_CASE".equals(t.get("taskId")))
             .findFirst();
 
         assertTrue(cancelTask.isPresent());
         assertEquals("CANCEL_CASE", cancelTask.get().get("taskId"));
         assertEquals("Cancel Case", cancelTask.get().get("taskName"));
-        assertTrue(cancelTask.get().get("description").contains("cancellation"));
+        assertTrue(((String) cancelTask.get().get("description")).contains("cancellation"));
         assertNotNull(cancelTask.get().get("exampleQuery"));
-        assertTrue(cancelTask.get().get("exampleQuery").contains("[case_number]"));
+        assertTrue(((String) cancelTask.get().get("exampleQuery")).contains("[case_number]"));
     }
 
     @Test
     void getAvailableTasks_updateCaseStatusHasCorrectFields() {
-        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
 
-        Optional<Map<String, String>> updateTask = tasks.stream()
+        Optional<Map<String, Object>> updateTask = tasks.stream()
             .filter(t -> "UPDATE_SAMPLE_STATUS".equals(t.get("taskId")))
             .findFirst();
 
         assertTrue(updateTask.isPresent());
         assertEquals("UPDATE_SAMPLE_STATUS", updateTask.get().get("taskId"));
         assertEquals("Update Sample Status", updateTask.get().get("taskName"));
-        assertTrue(updateTask.get().get("description").contains("status"));
+        assertTrue(((String) updateTask.get().get("description")).contains("status"));
         assertNotNull(updateTask.get().get("exampleQuery"));
-        assertTrue(updateTask.get().get("exampleQuery").contains("[sample_barcode]"));
-        assertTrue(updateTask.get().get("exampleQuery").contains("[sample_status]"));
+        assertTrue(((String) updateTask.get().get("exampleQuery")).contains("[sample_barcode]"));
+        assertTrue(((String) updateTask.get().get("exampleQuery")).contains("[sample_status]"));
     }
 
     @Test
     void getAvailableTasks_updateStainNameHasCorrectFields() {
-        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
 
-        Optional<Map<String, String>> stainTask = tasks.stream()
+        Optional<Map<String, Object>> stainTask = tasks.stream()
             .filter(t -> "UPDATE_STAIN_NAME".equals(t.get("taskId")))
             .findFirst();
 
@@ -369,8 +369,8 @@ class ProductionSupportOrchestratorTest {
         assertEquals("UPDATE_STAIN_NAME", stainTask.get().get("taskId"));
         assertEquals("Update Stain Name", stainTask.get().get("taskName"));
         assertNotNull(stainTask.get().get("exampleQuery"));
-        assertTrue(stainTask.get().get("exampleQuery").contains("[sample_barcode]"));
-        assertTrue(stainTask.get().get("exampleQuery").contains("[stain_name]"));
+        assertTrue(((String) stainTask.get().get("exampleQuery")).contains("[sample_barcode]"));
+        assertTrue(((String) stainTask.get().get("exampleQuery")).contains("[stain_name]"));
     }
 
     // ========== Edge Cases ==========
@@ -517,14 +517,115 @@ class ProductionSupportOrchestratorTest {
 
     @Test
     void getAvailableTasks_withNullDescription_handlesGracefully() {
-        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
 
         assertNotNull(tasks);
         // All tasks should have required fields even if description is null
-        for (Map<String, String> task : tasks) {
+        for (Map<String, Object> task : tasks) {
             assertNotNull(task.get("taskId"));
             assertNotNull(task.get("taskName"));
             assertNotNull(task.get("description")); // Should be empty string if null
+        }
+    }
+    
+    @Test
+    void getAvailableTasks_includesValidInputsForEnumValues() {
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
+
+        // Find UPDATE_SAMPLE_STATUS task
+        Optional<Map<String, Object>> updateStatusTask = tasks.stream()
+            .filter(t -> "UPDATE_SAMPLE_STATUS".equals(t.get("taskId")))
+            .findFirst();
+
+        assertTrue(updateStatusTask.isPresent());
+        
+        // Should have validInputs
+        assertTrue(updateStatusTask.get().containsKey("validInputs"));
+        Object validInputsObj = updateStatusTask.get().get("validInputs");
+        assertNotNull(validInputsObj);
+        assertTrue(validInputsObj instanceof List);
+        
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> validInputs = (List<Map<String, Object>>) validInputsObj;
+        assertFalse(validInputs.isEmpty());
+        
+        // Should have "Valid Sample statuss" (or similar) with enum values
+        Optional<Map<String, Object>> sampleStatusInput = validInputs.stream()
+            .filter(vi -> vi.get("name") != null && 
+                ((String) vi.get("name")).toLowerCase().contains("sample") &&
+                ((String) vi.get("name")).toLowerCase().contains("status"))
+            .findFirst();
+        
+        assertTrue(sampleStatusInput.isPresent());
+        assertTrue(sampleStatusInput.get().containsKey("list"));
+        Object listObj = sampleStatusInput.get().get("list");
+        assertNotNull(listObj);
+        assertTrue(listObj instanceof List);
+        
+        @SuppressWarnings("unchecked")
+        List<String> enumValues = (List<String>) listObj;
+        assertFalse(enumValues.isEmpty());
+        // Should contain at least "Canceled" from the enumValues
+        assertTrue(enumValues.contains("Canceled"));
+    }
+    
+    @Test
+    void getAvailableTasks_tasksWithoutEnumValues_haveNoValidInputs() {
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
+
+        // Find CANCEL_CASE task (should not have enumValues)
+        Optional<Map<String, Object>> cancelTask = tasks.stream()
+            .filter(t -> "CANCEL_CASE".equals(t.get("taskId")))
+            .findFirst();
+
+        assertTrue(cancelTask.isPresent());
+        
+        // Should not have validInputs (or have empty validInputs)
+        if (cancelTask.get().containsKey("validInputs")) {
+            Object validInputsObj = cancelTask.get().get("validInputs");
+            if (validInputsObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> validInputs = (List<Map<String, Object>>) validInputsObj;
+                assertTrue(validInputs.isEmpty());
+            }
+        }
+    }
+    
+    @Test
+    void getAvailableTasks_validInputsFormatIsCorrect() {
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
+
+        // Find UPDATE_SAMPLE_STATUS task
+        Optional<Map<String, Object>> updateStatusTask = tasks.stream()
+            .filter(t -> "UPDATE_SAMPLE_STATUS".equals(t.get("taskId")))
+            .findFirst();
+
+        assertTrue(updateStatusTask.isPresent());
+        assertTrue(updateStatusTask.get().containsKey("validInputs"));
+        
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> validInputs = (List<Map<String, Object>>) updateStatusTask.get().get("validInputs");
+        
+        for (Map<String, Object> validInput : validInputs) {
+            // Each validInput should have "name" and "list"
+            assertTrue(validInput.containsKey("name"));
+            assertTrue(validInput.containsKey("list"));
+            
+            // name should be a String
+            assertTrue(validInput.get("name") instanceof String);
+            String name = (String) validInput.get("name");
+            assertFalse(name.isEmpty());
+            assertTrue(name.startsWith("Valid "));
+            
+            // list should be a List of Strings
+            assertTrue(validInput.get("list") instanceof List);
+            @SuppressWarnings("unchecked")
+            List<String> list = (List<String>) validInput.get("list");
+            assertFalse(list.isEmpty());
+            for (String value : list) {
+                assertNotNull(value);
+                assertFalse(value.isEmpty());
+            }
         }
     }
 

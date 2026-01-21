@@ -121,12 +121,12 @@ public class ProductionSupportOrchestrator {
      * Get all available task types
      * Useful for UI to display options when pattern detection fails
      */
-    public List<Map<String, String>> getAvailableTasks() {
-        List<Map<String, String>> tasks = new ArrayList<>();
+    public List<Map<String, Object>> getAvailableTasks() {
+        List<Map<String, Object>> tasks = new ArrayList<>();
         
         // Add all runbooks from registry
         for (UseCaseDefinition useCase : runbookRegistry.getAllUseCases()) {
-            Map<String, String> task = new java.util.HashMap<>();
+            Map<String, Object> task = new java.util.HashMap<>();
             task.put("taskId", useCase.getUseCase().getId());
             task.put("taskName", useCase.getUseCase().getName());
             task.put("description", useCase.getUseCase().getDescription() != null ? 
@@ -136,9 +136,68 @@ public class ProductionSupportOrchestrator {
                 !useCase.getUseCase().getExampleQuery().isEmpty()) {
                 task.put("exampleQuery", useCase.getUseCase().getExampleQuery());
             }
+            
+            // Extract validInputs from entity enumValues
+            List<Map<String, Object>> validInputs = extractValidInputs(useCase);
+            if (!validInputs.isEmpty()) {
+                task.put("validInputs", validInputs);
+            }
+            
             tasks.add(task);
         }
         
         return tasks;
+    }
+    
+    /**
+     * Extract validInputs from entity validations that have enumValues
+     */
+    private List<Map<String, Object>> extractValidInputs(UseCaseDefinition useCase) {
+        List<Map<String, Object>> validInputs = new ArrayList<>();
+        
+        if (useCase.getExtraction() == null || useCase.getExtraction().getEntities() == null) {
+            return validInputs;
+        }
+        
+        for (Map.Entry<String, UseCaseDefinition.EntityConfig> entry : useCase.getExtraction().getEntities().entrySet()) {
+            String entityName = entry.getKey();
+            UseCaseDefinition.EntityConfig entityConfig = entry.getValue();
+            
+            if (entityConfig.getValidation() != null && 
+                entityConfig.getValidation().getEnumValues() != null && 
+                !entityConfig.getValidation().getEnumValues().isEmpty()) {
+                
+                Map<String, Object> validInput = new java.util.HashMap<>();
+                // Create a user-friendly name for the valid inputs
+                String displayName = formatEntityNameForDisplay(entityName);
+                validInput.put("name", displayName);
+                validInput.put("list", entityConfig.getValidation().getEnumValues());
+                validInputs.add(validInput);
+            }
+        }
+        
+        return validInputs;
+    }
+    
+    /**
+     * Format entity name for display (e.g., "sampleStatus" -> "Valid Sample statuses")
+     */
+    private String formatEntityNameForDisplay(String entityName) {
+        // Convert camelCase to Title Case with spaces
+        String formatted = entityName.replaceAll("([a-z])([A-Z])", "$1 $2");
+        formatted = formatted.substring(0, 1).toUpperCase() + formatted.substring(1);
+        
+        // Add "Valid" prefix and pluralize if needed
+        // Handle common pluralization rules
+        if (formatted.endsWith("s") || formatted.endsWith("x") || formatted.endsWith("z") || 
+            formatted.endsWith("ch") || formatted.endsWith("sh")) {
+            return "Valid " + formatted + "es";
+        } else if (formatted.endsWith("y") && !formatted.matches(".*[aeiou]y$")) {
+            return "Valid " + formatted.substring(0, formatted.length() - 1) + "ies";
+        } else if (!formatted.endsWith("s")) {
+            return "Valid " + formatted + "s";
+        } else {
+            return "Valid " + formatted;
+        }
     }
 }

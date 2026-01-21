@@ -66,8 +66,8 @@ public class ProductionSupportController {
         )
     })
     @GetMapping("/tasks")
-    public ResponseEntity<List<Map<String, String>>> getAvailableTasks() {
-        List<Map<String, String>> tasks = orchestrator.getAvailableTasks();
+    public ResponseEntity<List<Map<String, Object>>> getAvailableTasks() {
+        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
         return ResponseEntity.ok(tasks);
     }
     
