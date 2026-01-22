@@ -9,8 +9,10 @@ import com.lca.productionsupport.model.StepMethod;
 import com.lca.productionsupport.model.UseCaseDefinition;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -424,7 +426,16 @@ public class StepExecutionService {
         
         switch (method) {
             case GET:
-                request = webClient.get().uri(path);
+                // Some GET endpoints require a request body (e.g., getWorkpoolEntry)
+                if (body != null && !body.isEmpty()) {
+                    // Use method() to support GET with body
+                    request = webClient.method(HttpMethod.GET)
+                        .uri(path)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(BodyInserters.fromValue(body));
+                } else {
+                    request = webClient.get().uri(path);
+                }
                 break;
                 
             case POST:
@@ -454,6 +465,13 @@ public class StepExecutionService {
                 
             default:
                 throw new IllegalArgumentException("Unsupported HTTP method: " + method);
+        }
+        
+        // Add Content-Type header for GET requests with body
+        if (method == StepMethod.GET && body != null && !body.isEmpty()) {
+            if (customHeaders == null || !customHeaders.containsKey("Content-Type")) {
+                request = request.header("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+            }
         }
         
         // Add standard headers only if not already present in customHeaders
