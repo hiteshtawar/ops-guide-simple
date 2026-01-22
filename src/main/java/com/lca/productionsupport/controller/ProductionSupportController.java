@@ -40,22 +40,6 @@ public class ProductionSupportController {
     private final StepExecutionService stepExecutionService;
     
     @Operation(
-        summary = "Health Check",
-        description = "Check if the service is running and healthy"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Service is healthy",
-            content = @Content(mediaType = MediaType.TEXT_PLAIN_VALUE, schema = @Schema(implementation = String.class))
-        )
-    })
-    @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("OK");
-    }
-    
-    @Operation(
         summary = "Get Available Tasks",
         description = "Returns list of all supported task types. Useful for UI to display options when automatic pattern detection fails or for manual task selection."
     )
