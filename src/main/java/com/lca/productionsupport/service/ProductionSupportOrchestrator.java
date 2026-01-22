@@ -3,6 +3,7 @@ package com.lca.productionsupport.service;
 import com.lca.productionsupport.model.UseCaseDefinition;
 import com.lca.productionsupport.model.OperationalRequest;
 import com.lca.productionsupport.model.OperationalResponse;
+import com.lca.productionsupport.model.TaskInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -121,29 +122,30 @@ public class ProductionSupportOrchestrator {
      * Get all available task types
      * Useful for UI to display options when pattern detection fails
      */
-    public List<Map<String, Object>> getAvailableTasks() {
-        List<Map<String, Object>> tasks = new ArrayList<>();
+    public List<TaskInfo> getAvailableTasks() {
+        List<TaskInfo> tasks = new ArrayList<>();
         
         // Add all runbooks from registry
         for (UseCaseDefinition useCase : runbookRegistry.getAllUseCases()) {
-            Map<String, Object> task = new java.util.HashMap<>();
-            task.put("taskId", useCase.getUseCase().getId());
-            task.put("taskName", useCase.getUseCase().getName());
-            task.put("description", useCase.getUseCase().getDescription() != null ? 
-                useCase.getUseCase().getDescription() : "");
+            TaskInfo.TaskInfoBuilder taskBuilder = TaskInfo.builder()
+                .taskId(useCase.getUseCase().getId())
+                .taskName(useCase.getUseCase().getName())
+                .description(useCase.getUseCase().getDescription() != null ? 
+                    useCase.getUseCase().getDescription() : "");
+            
             // Add example query if available
             if (useCase.getUseCase().getExampleQuery() != null && 
                 !useCase.getUseCase().getExampleQuery().isEmpty()) {
-                task.put("exampleQuery", useCase.getUseCase().getExampleQuery());
+                taskBuilder.exampleQuery(useCase.getUseCase().getExampleQuery());
             }
             
             // Extract validInputs from entity enumValues
-            List<Map<String, Object>> validInputs = extractValidInputs(useCase);
+            List<TaskInfo.ValidInput> validInputs = extractValidInputs(useCase);
             if (!validInputs.isEmpty()) {
-                task.put("validInputs", validInputs);
+                taskBuilder.validInputs(validInputs);
             }
             
-            tasks.add(task);
+            tasks.add(taskBuilder.build());
         }
         
         return tasks;
@@ -152,8 +154,8 @@ public class ProductionSupportOrchestrator {
     /**
      * Extract validInputs from entity validations that have enumValues
      */
-    private List<Map<String, Object>> extractValidInputs(UseCaseDefinition useCase) {
-        List<Map<String, Object>> validInputs = new ArrayList<>();
+    private List<TaskInfo.ValidInput> extractValidInputs(UseCaseDefinition useCase) {
+        List<TaskInfo.ValidInput> validInputs = new ArrayList<>();
         
         if (useCase.getExtraction() == null || useCase.getExtraction().getEntities() == null) {
             return validInputs;
@@ -167,11 +169,12 @@ public class ProductionSupportOrchestrator {
                 entityConfig.getValidation().getEnumValues() != null && 
                 !entityConfig.getValidation().getEnumValues().isEmpty()) {
                 
-                Map<String, Object> validInput = new java.util.HashMap<>();
                 // Create a user-friendly name for the valid inputs
                 String displayName = formatEntityNameForDisplay(entityName);
-                validInput.put("name", displayName);
-                validInput.put("list", entityConfig.getValidation().getEnumValues());
+                TaskInfo.ValidInput validInput = TaskInfo.ValidInput.builder()
+                    .name(displayName)
+                    .list(entityConfig.getValidation().getEnumValues())
+                    .build();
                 validInputs.add(validInput);
             }
         }

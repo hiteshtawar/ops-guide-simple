@@ -5,6 +5,7 @@ import com.lca.productionsupport.model.OperationalResponse;
 import com.lca.productionsupport.model.OperationalResponse.RunbookStep;
 import com.lca.productionsupport.model.StepExecutionRequest;
 import com.lca.productionsupport.model.StepExecutionResponse;
+import com.lca.productionsupport.model.TaskInfo;
 import com.lca.productionsupport.service.ProductionSupportOrchestrator;
 import com.lca.productionsupport.service.StepExecutionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -66,8 +67,8 @@ public class ProductionSupportController {
         )
     })
     @GetMapping("/tasks")
-    public ResponseEntity<List<Map<String, Object>>> getAvailableTasks() {
-        List<Map<String, Object>> tasks = orchestrator.getAvailableTasks();
+    public ResponseEntity<List<TaskInfo>> getAvailableTasks() {
+        List<TaskInfo> tasks = orchestrator.getAvailableTasks();
         return ResponseEntity.ok(tasks);
     }
     
