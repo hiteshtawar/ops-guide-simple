@@ -155,10 +155,7 @@ public class ProductionSupportController {
         if (apiUser != null && !apiUser.isEmpty()) {
             customHeaders.put("Api-User", apiUser);
             log.info("Added Api-User to customHeaders: {}", apiUser);
-        } else {
-            log.warn("Api-User header is null or empty - placeholder {api_user} may not be resolved");
-        }
-        log.debug("Custom headers map: {}", customHeaders);
+        } 
         if (labId != null && !labId.isEmpty()) {
             customHeaders.put("Lab-Id", labId);
         }
@@ -174,9 +171,10 @@ public class ProductionSupportController {
         if (accept != null && !accept.isEmpty()) {
             customHeaders.put("accept", accept);
         }
-        
+        log.debug("Custom headers map: {}", customHeaders);
+
         request.setCustomHeaders(customHeaders);
-        
+
         StepExecutionResponse response = stepExecutionService.executeStep(request);
         
         return ResponseEntity.ok(response);
