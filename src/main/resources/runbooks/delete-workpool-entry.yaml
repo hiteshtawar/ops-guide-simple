@@ -57,6 +57,22 @@ extraction:
       validation:
         regex: "^[A-Za-z0-9\\-_\\s]{1,100}$"
         errorMessage: "Workpool name must be alphanumeric with optional hyphens, underscores, or spaces (1-100 characters)"
+        enumValues:
+          - "Embedding"
+          - "Microtomy"
+          - "Transcription"
+          - "Explicit Accessioning"
+          - "PC Only/Consult Grossing"
+          - "Staining"
+          - "Microtomy Slides"
+          - "Slide Storage"
+          - "TC Only Sign Out"
+          - "Pathologist Review"
+          - "Grossing"
+          - "Case Assembly"
+          - "Processing"
+          - "Rostering"
+          - "Shared Specimens Incoming"
     
     labCode:
       type: "string"
