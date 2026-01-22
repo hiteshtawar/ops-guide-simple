@@ -29,10 +29,13 @@ extraction:
     barcode:
       type: "string"
       patterns:
+        - "sample\\s+\\[([A-Za-z0-9\\-_]{4,50})\\]" # "sample [2025322P284448-A_1_1]"
+        - "for\\s+sample\\s+\\[([A-Za-z0-9\\-_]{4,50})\\]" # "for sample [2025322P284448-A_1_1]"
         - "(?:sample|slide|container|block)\\s+(?:barcode\\s+)?([A-Za-z0-9\\-_]{4,50})" # Alphanumeric barcode with hyphens/underscores
         - "barcode\\s+([A-Za-z0-9\\-_]{4,50})"
         - "(?:for\\s+)?(?:sample|slide|container|block)\\s+([A-Za-z0-9\\-_]{4,50})" # "for sample BC123456"
-        - "([A-Za-z0-9\\-_]{4,50})" # Standalone barcode
+        - "\\[([A-Za-z0-9\\-_]{4,50})\\]" # Standalone barcode in brackets
+        - "\\b([0-9]{7,}[A-Z][0-9]{4,}[\\-_][A-Za-z0-9\\-_]{0,10})\\b" # Specific barcode format like 2025322P284448-A_1_1
       required: true
       validation:
         regex: "^[A-Za-z0-9\\-_]{4,50}$"
@@ -41,7 +44,10 @@ extraction:
     workpoolName:
       type: "string"
       patterns:
+        - "workpool\\s+entry\\s+\\[([A-Za-z0-9\\-_\\s]+)\\]" # "workpool entry [Pathologist Review]"
+        - "entry\\s+\\[([A-Za-z0-9\\-_\\s]+)\\]" # "entry [Pathologist Review]"
         - "workpool\\s+entry\\s+([A-Za-z0-9\\-_\\s]+)\\s+for" # "workpool entry NAME for"
+        - "workpool\\s+\\[([A-Za-z0-9\\-_\\s]+)\\]" # "workpool [Pathologist Review]"
         - "workpool\\s+([A-Za-z0-9\\-_\\s]+)\\s+for" # "workpool NAME for"
         - "entry\\s+([A-Za-z0-9\\-_\\s]+)\\s+for" # "entry NAME for"
         - "workpool\\s+entry\\s+([A-Za-z0-9\\-_\\s]+)" # "workpool entry NAME"
@@ -55,11 +61,13 @@ extraction:
     labCode:
       type: "string"
       patterns:
-        - "lab\\s+code\\s+([A-Za-z0-9\\-_]{2,20})" # "lab code ABC123"
-        - "lab\\s+([A-Za-z0-9\\-_]{2,20})" # "lab ABC123"
-        - "code\\s+([A-Za-z0-9\\-_]{2,20})" # "code ABC123"
-        - "\\b([A-Z]{2,10})\\b" # Standalone uppercase lab code (2-10 chars)
-        - "\\b([A-Za-z0-9]{2,20})\\b" # Standalone alphanumeric code
+        - "lab\\s+code\\s+\\[([A-Za-z0-9\\-_]{2,20})\\]" # "lab code [FORAZ]"
+        - "with\\s+lab\\s+code\\s+\\[([A-Za-z0-9\\-_]{2,20})\\]" # "with lab code [FORAZ]"
+        - "lab\\s+code\\s+([A-Za-z0-9\\-_]{2,20})" # "lab code FORAZ"
+        - "with\\s+lab\\s+code\\s+([A-Za-z0-9\\-_]{2,20})" # "with lab code FORAZ"
+        - "lab\\s+\\[([A-Za-z0-9\\-_]{2,20})\\]" # "lab [FORAZ]"
+        - "lab\\s+([A-Za-z0-9\\-_]{2,20})" # "lab FORAZ"
+        - "\\b([A-Z]{3,10})\\b" # Standalone uppercase lab code (3-10 chars, more specific)
       required: true
       validation:
         regex: "^[A-Za-z0-9\\-_]{2,20}$"
