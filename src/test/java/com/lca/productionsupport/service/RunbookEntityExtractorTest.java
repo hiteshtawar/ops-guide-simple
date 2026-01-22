@@ -555,20 +555,28 @@ class RunbookEntityExtractorTest {
         
         UseCaseDefinition.EntityConfig storageUnitConfig = new UseCaseDefinition.EntityConfig();
         storageUnitConfig.setPatterns(List.of(
-            "for\\s+storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)",
-            "storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)",
-            "unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)",
+            "for\\s+storage\\s+unit\\s+\\[([^\\]]+)\\]", // Prioritize bracket content
+            "storage\\s+unit\\s+\\[([^\\]]+)\\]", // Prioritize bracket content
+            "unit\\s+\\[([^\\]]+)\\]", // Prioritize bracket content
+            "for\\s+storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)", // Fallback
+            "storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)", // Fallback
+            "unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)", // Fallback
             "\\b([A-Z]{2,}-[A-Z0-9\\-_]+)\\b"
         ));
         storageUnitConfig.setRequired(true);
         
         config.setEntities(Map.of("storageUnitName", storageUnitConfig));
         
-        // Test with bracketed storage unit name
+        // Test with bracketed storage unit name (should extract everything inside brackets)
         Map<String, String> result = extractor.extract("Reconcile occupied count for storage unit [CS-FORAZ85449-1]", config);
         
         assertNotNull(result.get("storageUnitName"), "Storage unit name should be extracted");
         assertEquals("CS-FORAZ85449-1", result.get("storageUnitName"), "Should extract correct storage unit name, not 'unit'");
+        
+        // Test with bracketed storage unit name with spaces (should extract everything including spaces)
+        Map<String, String> resultWithSpaces = extractor.extract("Clear storage unit [YORNC Case Assembly Holding Area]", config);
+        assertNotNull(resultWithSpaces.get("storageUnitName"), "Storage unit name with spaces should be extracted");
+        assertEquals("YORNC Case Assembly Holding Area", resultWithSpaces.get("storageUnitName"), "Should extract full name including spaces");
         
         // Test without brackets
         Map<String, String> result2 = extractor.extract("Reconcile occupied count for storage unit CS-FORAZ85449-1", config);

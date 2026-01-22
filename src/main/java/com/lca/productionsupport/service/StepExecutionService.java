@@ -460,7 +460,16 @@ public class StepExecutionService {
                 break;
                 
             case DELETE:
-                request = webClient.delete().uri(path);
+                // Some DELETE endpoints require a request body (e.g., deleteWorkpoolEntry)
+                if (body != null && !body.isEmpty()) {
+                    // Use method() to support DELETE with body
+                    request = webClient.method(HttpMethod.DELETE)
+                        .uri(path)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(BodyInserters.fromValue(body));
+                } else {
+                    request = webClient.delete().uri(path);
+                }
                 break;
                 
             default:

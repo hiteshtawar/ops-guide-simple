@@ -26,9 +26,12 @@ extraction:
     storageUnitName:
       type: "string"
       patterns:
-        - "for\\s+storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "for storage unit [NAME]" or "for storage unit NAME"
-        - "storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "storage unit [NAME]"
-        - "unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "unit [NAME]"
+        - "for\\s+storage\\s+unit\\s+\\[([^\\]]+)\\]" # "for storage unit [NAME]" - prioritize bracket content (includes spaces)
+        - "storage\\s+unit\\s+\\[([^\\]]+)\\]" # "storage unit [NAME]" - prioritize bracket content
+        - "unit\\s+\\[([^\\]]+)\\]" # "unit [NAME]" - prioritize bracket content
+        - "for\\s+storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "for storage unit [NAME]" or "for storage unit NAME" (fallback)
+        - "storage\\s+unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "storage unit [NAME]" (fallback)
+        - "unit\\s+\\[?([A-Za-z0-9\\-_\\s]+?)\\]?(?:\\s|$)" # "unit [NAME]" (fallback)
         - "\\b([A-Z]{2,}-[A-Z0-9\\-_]+)\\b" # Pattern like CS-FORAZ85449-1 (caps with hyphens)
       required: true
       validation:

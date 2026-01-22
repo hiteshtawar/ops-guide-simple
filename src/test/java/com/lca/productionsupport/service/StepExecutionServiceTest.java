@@ -448,6 +448,102 @@ class StepExecutionServiceTest {
         assertNotNull(response);
     }
 
+    @Test
+    void executeStep_withDELETEMethod_withBody_handlesCorrectly() {
+        // Create a test runbook with DELETE method and body
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_DELETE");
+        useCase.setUseCase(info);
+        UseCaseDefinition.ClassificationConfig classification = new UseCaseDefinition.ClassificationConfig();
+        classification.setKeywords(List.of("test"));
+        useCase.setClassification(classification);
+        UseCaseDefinition.ExecutionConfig execution = new UseCaseDefinition.ExecutionConfig();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("DELETE");
+        step.setPath("/api/test/{barcode}");
+        step.setStepType("procedure");
+        step.setBody(Map.of("labCode", "{labCode}"));
+        execution.setSteps(List.of(step));
+        useCase.setExecution(execution);
+        
+        // Manually add to registry for test
+        RunbookRegistry testRegistry = new RunbookRegistry() {
+            @Override
+            public UseCaseDefinition getUseCase(String id) {
+                if ("TEST_DELETE".equals(id)) {
+                    return useCase;
+                }
+                return super.getUseCase(id);
+            }
+        };
+        
+        StepExecutionService testService = new StepExecutionService(
+            webClientRegistry, testRegistry, runbookAdapter, errorMessageTranslator);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("TEST_DELETE")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("barcode", "BC123456", "labCode", "FORAZ"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        // Should not throw, but will fail on actual HTTP call
+        StepExecutionResponse response = testService.executeStep(request);
+        assertNotNull(response);
+    }
+
+    @Test
+    void executeStep_withDELETEMethod_withoutBody_handlesCorrectly() {
+        // Create a test runbook with DELETE method without body
+        UseCaseDefinition useCase = new UseCaseDefinition();
+        UseCaseDefinition.UseCaseInfo info = new UseCaseDefinition.UseCaseInfo();
+        info.setId("TEST_DELETE_NO_BODY");
+        useCase.setUseCase(info);
+        UseCaseDefinition.ClassificationConfig classification = new UseCaseDefinition.ClassificationConfig();
+        classification.setKeywords(List.of("test"));
+        useCase.setClassification(classification);
+        UseCaseDefinition.ExecutionConfig execution = new UseCaseDefinition.ExecutionConfig();
+        UseCaseDefinition.StepDefinition step = new UseCaseDefinition.StepDefinition();
+        step.setStepNumber(1);
+        step.setMethod("DELETE");
+        step.setPath("/api/test/{barcode}");
+        step.setStepType("procedure");
+        // No body
+        execution.setSteps(List.of(step));
+        useCase.setExecution(execution);
+        
+        // Manually add to registry for test
+        RunbookRegistry testRegistry = new RunbookRegistry() {
+            @Override
+            public UseCaseDefinition getUseCase(String id) {
+                if ("TEST_DELETE_NO_BODY".equals(id)) {
+                    return useCase;
+                }
+                return super.getUseCase(id);
+            }
+        };
+        
+        StepExecutionService testService = new StepExecutionService(
+            webClientRegistry, testRegistry, runbookAdapter, errorMessageTranslator);
+        
+        StepExecutionRequest request = StepExecutionRequest.builder()
+            .taskId("TEST_DELETE_NO_BODY")
+            .downstreamService("ap-services")
+            .stepNumber(1)
+            .entities(Map.of("barcode", "BC123456"))
+            .userId("user123")
+            .authToken("token")
+            .build();
+
+        // Should not throw, but will fail on actual HTTP call
+        StepExecutionResponse response = testService.executeStep(request);
+        assertNotNull(response);
+    }
+
     // ========== Header Check Tests ==========
 
     @Test
