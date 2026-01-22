@@ -128,10 +128,12 @@ public class StepExecutionService {
             // Verify response and generate stepResponse if verification config exists
             String stepResponse = null;
             if (step.getVerificationExpectedFields() != null || step.getVerificationRequiredFields() != null) {
-                stepResponse = verifyAndGenerateStepResponse(responseBody, step, request.getEntities());
+                stepResponse = verifyAndGenerateStepResponse(responseBody, step, request.getEntities(), request);
             } else if (step.getStepResponseMessage() != null) {
                 // Generate stepResponse from template if no verification but template exists
                 stepResponse = replacePlaceholdersInMessage(step.getStepResponseMessage(), Map.of(), request.getEntities());
+                // Also resolve header placeholders like {api_user}
+                stepResponse = resolveHeaderPlaceholders(stepResponse, request);
             }
             
             return StepExecutionResponse.builder()
@@ -598,7 +600,10 @@ public class StepExecutionService {
         
         // Resolve from custom headers (request headers)
         if (customHeaders != null) {
-            resolved = resolved.replace("{api_user}", customHeaders.getOrDefault("Api-User", "{api_user}"));
+            String apiUserValue = customHeaders.getOrDefault("Api-User", "{api_user}");
+            log.debug("Resolving {api_user} placeholder - Api-User header value: {}, customHeaders keys: {}", 
+                    apiUserValue, customHeaders.keySet());
+            resolved = resolved.replace("{api_user}", apiUserValue);
             resolved = resolved.replace("{lab_id}", customHeaders.getOrDefault("Lab-Id", "{lab_id}"));
             resolved = resolved.replace("{discipline_name}", customHeaders.getOrDefault("Discipline-Name", "{discipline_name}"));
             resolved = resolved.replace("{time_zone}", customHeaders.getOrDefault("Time-Zone", "{time_zone}"));
@@ -698,7 +703,7 @@ public class StepExecutionService {
      * Verify API response against expected fields and generate stepResponse message
      * Returns the generated message if verification passes, null otherwise
      */
-    String verifyAndGenerateStepResponse(String responseBody, RunbookStep step, Map<String, String> entities) {
+    String verifyAndGenerateStepResponse(String responseBody, RunbookStep step, Map<String, String> entities, StepExecutionRequest request) {
         if (responseBody == null || responseBody.isEmpty()) {
             return null;
         }
@@ -785,6 +790,11 @@ public class StepExecutionService {
                         }
                     }
                     
+                    // Resolve header placeholders like {api_user}
+                    if (request != null) {
+                        stepResponse = resolveHeaderPlaceholders(stepResponse, request);
+                    }
+                    
                     return stepResponse;
                 }
                 
@@ -860,6 +870,11 @@ public class StepExecutionService {
                         for (Map.Entry<String, String> entry : entities.entrySet()) {
                             stepResponse = stepResponse.replace("{" + entry.getKey() + "}", entry.getValue());
                         }
+                    }
+                    
+                    // Resolve header placeholders like {api_user}
+                    if (request != null) {
+                        stepResponse = resolveHeaderPlaceholders(stepResponse, request);
                     }
                     
                     return stepResponse;

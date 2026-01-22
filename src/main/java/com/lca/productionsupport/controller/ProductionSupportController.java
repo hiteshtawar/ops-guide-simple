@@ -142,7 +142,8 @@ public class ProductionSupportController {
         @RequestHeader(value = "Time-Zone", required = false) String timeZone,
         @RequestHeader(value = "accept", required = false) String accept
     ) {
-        log.info("Executing step {} for task {} with role: {}", request.getStepNumber(), request.getTaskId(), roleName);
+        log.info("Executing step {} for task {} with role: {}, Api-User: {}", 
+                request.getStepNumber(), request.getTaskId(), roleName, apiUser);
         
         // Set the user role from header if not already set in request body
         if (roleName != null && !roleName.isEmpty()) {
@@ -153,7 +154,11 @@ public class ProductionSupportController {
         Map<String, String> customHeaders = new HashMap<>();
         if (apiUser != null && !apiUser.isEmpty()) {
             customHeaders.put("Api-User", apiUser);
+            log.info("Added Api-User to customHeaders: {}", apiUser);
+        } else {
+            log.warn("Api-User header is null or empty - placeholder {api_user} may not be resolved");
         }
+        log.debug("Custom headers map: {}", customHeaders);
         if (labId != null && !labId.isEmpty()) {
             customHeaders.put("Lab-Id", labId);
         }

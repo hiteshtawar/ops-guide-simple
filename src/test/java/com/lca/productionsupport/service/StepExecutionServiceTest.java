@@ -1626,7 +1626,7 @@ class StepExecutionServiceTest {
         
         Map<String, String> entities = Map.of("case_id", "2025123P6732");
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities, null);
         
         assertNotNull(result);
         assertEquals("Audit Log entry was created by user123 for 2025123P6732 and status was changed to cancelled", result);
@@ -1643,7 +1643,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Audit Log entry was created by {modifiedBy}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -1659,7 +1659,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -1675,7 +1675,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // No template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -1692,7 +1692,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Test {caseId}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -1708,7 +1708,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         // Should still generate message using default "status" placeholder
         assertNotNull(result);
@@ -1727,7 +1727,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Audit Log entry was created by {modifiedBy} for {caseId} and status was changed to {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Audit Log entry was created by user123 for 2025123P6732 and status was changed to cancelled", result);
@@ -1745,7 +1745,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status} for {caseId}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Status is cancelled for 2025123P6732", result);
@@ -1764,7 +1764,7 @@ class StepExecutionServiceTest {
         
         Map<String, String> entities = Map.of("case_id", "2025123P6732");
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities, null);
         
         assertNotNull(result);
         assertEquals("Audit Log entry for case 2025123P6732 - status changed to cancelled by user123", result);
@@ -1781,7 +1781,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case {caseId} has count {count} and status {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case 2025123P6732 has count 5 and status cancelled", result);
@@ -1802,7 +1802,7 @@ class StepExecutionServiceTest {
         
         Map<String, String> entities = Map.of("case_id", "2025123P6732");
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities, null);
         
         assertNotNull(result);
         assertEquals("Case cancellation verification failed for 2025123P6732 and the current status is Pending", result);
@@ -1822,7 +1822,7 @@ class StepExecutionServiceTest {
         
         Map<String, String> entities = Map.of("case_id", "2025123P6732");
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities, null);
         
         // Should generate error message even if status field is missing (will use empty string or not replace)
         // Actually, if status is missing, we can't replace it, so it will show {status} in the message
@@ -1844,7 +1844,7 @@ class StepExecutionServiceTest {
         
         Map<String, String> entities = Map.of("case_id", "2025123P6732");
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities, null);
         
         assertNotNull(result);
         assertEquals("Case cancellation verification failed for 2025123P6732 and the current status is Pending", result);
@@ -1861,7 +1861,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case status is \"Canceled\"", result);
@@ -1878,7 +1878,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case status is \"canceled\"", result);
@@ -1898,7 +1898,7 @@ class StepExecutionServiceTest {
         
         Map<String, String> entities = Map.of("case_id", "2025123P6732");
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities, null);
         
         assertNotNull(result);
         assertEquals("Case cancellation verification failed for 2025123P6732 and the current status is Pending", result);
@@ -1915,7 +1915,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case status is \"Canceled\"", result);
@@ -1932,7 +1932,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // No template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -1948,7 +1948,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         // Should still generate message using default "status" placeholder
         assertNotNull(result);
@@ -2222,10 +2222,10 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Test {status}")
             .build();
         
-        String result1 = stepExecutionService.verifyAndGenerateStepResponse(null, step, null);
+        String result1 = stepExecutionService.verifyAndGenerateStepResponse(null, step, null, null);
         assertNull(result1, "Should return null for null response body");
         
-        String result2 = stepExecutionService.verifyAndGenerateStepResponse("", step, null);
+        String result2 = stepExecutionService.verifyAndGenerateStepResponse("", step, null, null);
         assertNull(result2, "Should return null for empty response body");
     }
 
@@ -2241,7 +2241,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // No success message template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         assertNull(result, "Should return null when no stepResponseMessage template provided");
     }
 
@@ -2257,7 +2257,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case status is \"Canceled\"", result);
@@ -2275,7 +2275,7 @@ class StepExecutionServiceTest {
             .stepResponseErrorMessage(null) // No error template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result, "Should return null when verification fails and no error template provided");
     }
@@ -2335,7 +2335,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case {caseId} has status {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case 2025123P6732 has status cancelled", result);
@@ -2355,7 +2355,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // Null template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result, "Should return null when template is null");
     }
@@ -2371,7 +2371,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case {caseId} is active: {active} with count {count}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertTrue(result.contains("2025123P6732"));
@@ -2390,7 +2390,7 @@ class StepExecutionServiceTest {
             .stepResponseErrorMessage("Expected Canceled but got {statusString}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertTrue(result.contains("Pending"));
@@ -2408,7 +2408,7 @@ class StepExecutionServiceTest {
             .stepResponseErrorMessage("Status is {status} with count {count}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertTrue(result.contains("Pending"));
@@ -2426,7 +2426,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result, "Should return null for malformed JSON");
     }
@@ -2442,7 +2442,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         // Array doesn't have fields, should return null
         assertNull(result);
@@ -2459,7 +2459,7 @@ class StepExecutionServiceTest {
             .stepResponseErrorMessage("Missing status field")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         // Should try to generate error message
         // Returns null since required field is missing and can't replace placeholders
@@ -2477,7 +2477,7 @@ class StepExecutionServiceTest {
             .stepResponseErrorMessage("Expected status field is missing")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertTrue(result.contains("missing") || result.contains("Expected"));
@@ -2520,7 +2520,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         // Should handle null values gracefully
         assertNotNull(result);
@@ -2538,7 +2538,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status: {status}, Case: {caseId}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertTrue(result.contains("cancelled"));
@@ -2556,7 +2556,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Status is cancelled", result);
@@ -2593,7 +2593,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // No template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -2609,7 +2609,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // No message template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -2625,7 +2625,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Status is cancelled", result);
@@ -2642,7 +2642,7 @@ class StepExecutionServiceTest {
             .stepResponseErrorMessage("Case {case_id} has status {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertTrue(result.contains("Pending"));
@@ -2661,7 +2661,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         // Should generate message without verification
         assertNotNull(result);
@@ -2698,7 +2698,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case {caseId} status {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case 123 status cancelled", result);
@@ -2715,7 +2715,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case status is \"{status}\"")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case status is \"Canceled\"", result);
@@ -2732,7 +2732,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         // Should return null for malformed JSON that looks like JSON
         assertNull(result);
@@ -2751,7 +2751,7 @@ class StepExecutionServiceTest {
         
         Map<String, String> entities = Map.of(); // Empty map
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, entities, null);
         
         assertNotNull(result);
         assertTrue(result.contains("Pending"));
@@ -2771,7 +2771,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // No template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -2788,7 +2788,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("User {user} set status to {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("User john set status to cancelled", result);
@@ -2805,7 +2805,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // Matches but no template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -2822,7 +2822,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage(null) // No template
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNull(result);
     }
@@ -2839,7 +2839,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status: {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Status: cancelled", result);
@@ -2856,7 +2856,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status is {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Status is Canceled", result);
@@ -2873,7 +2873,7 @@ class StepExecutionServiceTest {
             .build();
         
         // Null response body is handled before try block, but empty triggers parsing
-        String result = stepExecutionService.verifyAndGenerateStepResponse("", step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse("", step, null, null);
         
         // Empty string should return null at the beginning
         assertNull(result);
@@ -2891,7 +2891,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Case {caseId} has status {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody, step, null, null);
         
         assertNotNull(result);
         assertEquals("Case 123 has status cancelled", result);
@@ -2908,7 +2908,7 @@ class StepExecutionServiceTest {
             .stepResponseMessage("Status: {status}")
             .build();
         
-        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody1, step, null);
+        String result = stepExecutionService.verifyAndGenerateStepResponse(responseBody1, step, null, null);
         
         assertNotNull(result);
         assertTrue(result.contains("Canceled"));
