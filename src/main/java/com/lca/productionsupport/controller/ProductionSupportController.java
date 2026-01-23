@@ -152,25 +152,18 @@ public class ProductionSupportController {
         
         // Collect custom headers from API Gateway to forward to downstream service
         Map<String, String> customHeaders = new HashMap<>();
+        addHeaderIfPresent(customHeaders, "Api-User", apiUser);
+        addHeaderIfPresent(customHeaders, "Lab-Id", labId);
+        addHeaderIfPresent(customHeaders, "Discipline-Name", disciplineName);
+        addHeaderIfPresent(customHeaders, "Time-Zone", timeZone);
+        addHeaderIfPresent(customHeaders, "Role-Name", roleName);
+        addHeaderIfPresent(customHeaders, "accept", accept);
+        
+        // Log Api-User specifically for debugging
         if (apiUser != null && !apiUser.isEmpty()) {
-            customHeaders.put("Api-User", apiUser);
             log.info("Added Api-User to customHeaders: {}", apiUser);
-        } 
-        if (labId != null && !labId.isEmpty()) {
-            customHeaders.put("Lab-Id", labId);
         }
-        if (disciplineName != null && !disciplineName.isEmpty()) {
-            customHeaders.put("Discipline-Name", disciplineName);
-        }
-        if (timeZone != null && !timeZone.isEmpty()) {
-            customHeaders.put("Time-Zone", timeZone);
-        }
-        if (roleName != null && !roleName.isEmpty()) {
-            customHeaders.put("Role-Name", roleName);
-        }
-        if (accept != null && !accept.isEmpty()) {
-            customHeaders.put("accept", accept);
-        }
+        
         log.debug("Custom headers map: {}", customHeaders);
 
         request.setCustomHeaders(customHeaders);
@@ -180,4 +173,12 @@ public class ProductionSupportController {
         return ResponseEntity.ok(response);
     }
     
+    /**
+     * Helper method to add header to map if value is not null and not empty
+     */
+    private void addHeaderIfPresent(Map<String, String> headers, String key, String value) {
+        if (value != null && !value.isEmpty()) {
+            headers.put(key, value);
+        }
+    }
 }
